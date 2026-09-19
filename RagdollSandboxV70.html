@@ -1906,11 +1906,7 @@ function buildPistol() {
   slide.castShadow = true;
   g.add(slide);
   g.userData.slide = slide;
-
-  const neonStrip = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.01, 0.18), glowMat);
-  neonStrip.position.set(0, 0.075, -0.02);
-  g.add(neonStrip);
-
+  
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.055), metalMat);
   grip.position.set(0, -0.02, 0.06);
   grip.rotation.x = 0.28;
