@@ -722,7 +722,10 @@ function initRenderer() {
 
 function applyGraphicsQuality(q) {
   graphicsQuality = q;
-  const maxShadowSize = renderer.capabilities.maxTextureSize || 4096;
+  const shadowsWereEnabled = renderer.shadowMap.enabled;
+  const oldShadowType = renderer.shadowMap.type;
+  const maxShadowSize = Math.min(renderer.capabilities.maxTextureSize || 4096, 4096);
+  let requestedShadowSize = 0;
   if (q === 'low') {
     renderer.setPixelRatio(1);
     renderer.shadowMap.enabled = false;
@@ -731,19 +734,27 @@ function applyGraphicsQuality(q) {
     renderer.setPixelRatio(Math.min(1.25, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
-    if (sunLight) sunLight.shadow.mapSize.set(2048, 2048);
+    requestedShadowSize = Math.min(2048, maxShadowSize);
   } else if (q === 'high') {
     renderer.setPixelRatio(Math.min(1.85, Math.max(1, window.devicePixelRatio || 1)));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    if (sunLight) sunLight.shadow.mapSize.set(Math.min(6144, maxShadowSize), Math.min(6144, maxShadowSize));
+    requestedShadowSize = Math.min(3072, maxShadowSize);
   } else if (q === 'ultra') {
     renderer.setPixelRatio(Math.min(2, Math.max(1, window.devicePixelRatio || 1)));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    if (sunLight) sunLight.shadow.mapSize.set(Math.min(8192, maxShadowSize), Math.min(8192, maxShadowSize));
+    requestedShadowSize = maxShadowSize;
   }
   if (sunLight) {
+    sunLight.castShadow = q !== 'low';
+    if (requestedShadowSize && (sunLight.shadow.mapSize.x !== requestedShadowSize || sunLight.shadow.mapSize.y !== requestedShadowSize)) {
+      sunLight.shadow.mapSize.set(requestedShadowSize, requestedShadowSize);
+      if (sunLight.shadow.map) {
+        sunLight.shadow.map.dispose();
+        sunLight.shadow.map = null;
+      }
+    }
     const half = q === 'ultra' ? 18 : q === 'high' ? 22 : 30;
     sunLight.shadow.camera.left = -half;
     sunLight.shadow.camera.right = half;
@@ -752,6 +763,13 @@ function applyGraphicsQuality(q) {
     sunLight.shadow.radius = q === 'ultra' ? 0.65 : q === 'high' ? 0.8 : 1.0;
     sunLight.shadow.camera.updateProjectionMatrix();
     sunLight.shadow.needsUpdate = true;
+  }
+  if (shadowsWereEnabled !== renderer.shadowMap.enabled || oldShadowType !== renderer.shadowMap.type) {
+    scene.traverse(obj => {
+      if (!obj.material) return;
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      materials.forEach(material => { material.needsUpdate = true; });
+    });
   }
   renderer.shadowMap.needsUpdate = true;
 }
