@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RagdollSandbox V7.0.1</title>
+<title>RagdollSandboxV8.0.0B</title>
 <style>
   html, body { margin:0; padding:0; overflow:hidden; background:#07080c; height:100%; }
   canvas { display:block; }
@@ -198,6 +198,14 @@
         <div class="row">
           <input type="range" id="buildingSizeSlider" min="3" max="12" step="1" value="7">
           <div class="val" id="buildingSizeVal">7</div>
+        </div>
+      </div>
+      <div class="checkrow"><input type="checkbox" id="buildingDummiesCheck" checked><label for="buildingDummiesCheck">Spawn Dummies Inside Buildings</label></div>
+      <div>
+        <label>Dummies Per Room</label>
+        <div class="row">
+          <input type="range" id="buildingDummyDensitySlider" min="0.1" max="1" step="0.05" value="0.4">
+          <div class="val" id="buildingDummyDensityVal">0.40x</div>
         </div>
       </div>
     </div>
@@ -400,8 +408,8 @@
       <div>
         <label>Ragdoll Reset Time</label>
         <div class="row">
-          <input type="range" id="resetTimerSlider" min="1" max="15" step="1" value="5">
-          <div class="val" id="resetTimerVal">5s</div>
+          <input type="range" id="resetTimerSlider" min="1" max="60" step="1" value="25">
+          <div class="val" id="resetTimerVal">25s</div>
         </div>
       </div>
       <div class="checkrow" style="align-self:end;"><input type="checkbox" id="ragdollNeverDespawnCheck"><label for="ragdollNeverDespawnCheck">Never Despawn Ragdolls</label></div>
@@ -515,6 +523,35 @@
       </div>
     </div>
 
+    <div class="section">Gore & Trauma</div>
+    <div class="grid2">
+      <div class="checkrow"><input type="checkbox" id="bloodSticksCheck" checked><label for="bloodSticksCheck">Blood Sticks To Ragdolls</label></div>
+      <div class="checkrow"><input type="checkbox" id="bulletHolesCheck" checked><label for="bulletHolesCheck">Bullet Holes</label></div>
+      <div class="checkrow"><input type="checkbox" id="dismembermentCheck" checked><label for="dismembermentCheck">Limb Dismemberment</label></div>
+      <div class="checkrow"><input type="checkbox" id="wincingCheck" checked><label for="wincingCheck">Wincing (Kick/Flail On Death)</label></div>
+      <div>
+        <label>Wincing Chance</label>
+        <div class="row">
+          <input type="range" id="wincingChanceSlider" min="0" max="1" step="0.05" value="0.65">
+          <div class="val" id="wincingChanceVal">65%</div>
+        </div>
+      </div>
+      <div>
+        <label>Stumble Chance</label>
+        <div class="row">
+          <input type="range" id="stumbleChanceSlider" min="0" max="1" step="0.05" value="0.4">
+          <div class="val" id="stumbleChanceVal">40%</div>
+        </div>
+      </div>
+      <div>
+        <label>Dismember Hit Threshold</label>
+        <div class="row">
+          <input type="range" id="dismemberThresholdSlider" min="1" max="8" step="1" value="3">
+          <div class="val" id="dismemberThresholdVal">3</div>
+        </div>
+      </div>
+    </div>
+
     <div class="btnrow">
       <button class="respawn" id="respawnBtn">Respawn Dummies + Buildings</button>
       <button class="resume" id="resumeBtn">Resume</button>
@@ -576,7 +613,7 @@ const CONFIG = {
   airborneAngularDamping: 0.10,
   secondaryMotion: true,
   physicsSubsteps: 8,
-  painWrithingEnabled: false,
+  painWrithingEnabled: true,
   painWrithingIntensity: 0.35,
   painRollAmount: 0.35,
   painWrithingDuration: 3.5,
@@ -584,9 +621,14 @@ const CONFIG = {
   limpRelaxSpeed: 0.95,
   impactSpin: 0.15,
   ragdollFriction: 0.8,
-  painLegKickingEnabled: false,
+  painLegKickingEnabled: true,
   painLegKickIntensity: 0.55,
   painLegKickRate: 1.0,
+  wincingChance: 0.65,
+  stumbleChance: 0.4,
+  stumbleDurationMin: 0.35,
+  stumbleDurationMax: 0.85,
+  stumbleStrength: 1.0,
   bloodParticleMultiplier: 1.75,
   bloodParticleLifetime: 0.60,
   bloodSplashEnabled: true,
@@ -599,13 +641,16 @@ const CONFIG = {
   bloodPoolSize: 1.2,
   bloodPoolOpacity: 0.72,
   bloodDotLifetime: 12,
-  damageMarksEnabled: false,
+  
+  damageMarksEnabled: true,
   damageMarkCap: 500,
-  damageMarkSize: 0.032,
+  damageMarkSize: 0.05,
+  bulletHolesEnabled: true,
+  bulletHoleCap: 450,
   headshotDebrisEnabled: true,
   headshotDebrisPerHit: 10,
   goreDebrisCap: 280,
-  dismembermentEnabled: false,
+  dismembermentEnabled: true,
   dismemberHitThreshold: 3,
   jointStrength: 1.0,
   postDeathHits: true,
@@ -614,12 +659,15 @@ const CONFIG = {
   hideAllUi: false,
   timeScale: 1.0,
   groundGrid: true,
-  ragdollResetTime: 5,
+  ragdollResetTime: 25,
   ragdollNeverDespawn: false,
   weapon: 'pistol',
   arenaHalf: 60,
   buildingCount: 3,
   buildingRoomTarget: 7,
+  buildingDummiesEnabled: true,
+  buildingDummiesPerRoom: 0.4,
+  buildingDummiesMax: 6,
   npcCount: 10,
   ragdollInheritVelocity: true,
   playerRadius: 0.42,
@@ -674,6 +722,7 @@ const bloodDecals = [];
 const bloodPools = [];
 const bloodLandingDots = [];
 const damageMarks = [];
+const bulletHoles = [];
 const goreDebris = [];
 const shellCasings = [];
 const MAX_BLOOD_PARTICLES = 2600;
@@ -722,10 +771,7 @@ function initRenderer() {
 
 function applyGraphicsQuality(q) {
   graphicsQuality = q;
-  const shadowsWereEnabled = renderer.shadowMap.enabled;
-  const oldShadowType = renderer.shadowMap.type;
-  const maxShadowSize = Math.min(renderer.capabilities.maxTextureSize || 4096, 4096);
-  let requestedShadowSize = 0;
+  const maxShadowSize = renderer.capabilities.maxTextureSize || 4096;
   if (q === 'low') {
     renderer.setPixelRatio(1);
     renderer.shadowMap.enabled = false;
@@ -734,27 +780,19 @@ function applyGraphicsQuality(q) {
     renderer.setPixelRatio(Math.min(1.25, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
-    requestedShadowSize = Math.min(2048, maxShadowSize);
+    if (sunLight) sunLight.shadow.mapSize.set(2048, 2048);
   } else if (q === 'high') {
     renderer.setPixelRatio(Math.min(1.85, Math.max(1, window.devicePixelRatio || 1)));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    requestedShadowSize = Math.min(3072, maxShadowSize);
+    if (sunLight) sunLight.shadow.mapSize.set(Math.min(6144, maxShadowSize), Math.min(6144, maxShadowSize));
   } else if (q === 'ultra') {
     renderer.setPixelRatio(Math.min(2, Math.max(1, window.devicePixelRatio || 1)));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    requestedShadowSize = maxShadowSize;
+    if (sunLight) sunLight.shadow.mapSize.set(Math.min(8192, maxShadowSize), Math.min(8192, maxShadowSize));
   }
   if (sunLight) {
-    sunLight.castShadow = q !== 'low';
-    if (requestedShadowSize && (sunLight.shadow.mapSize.x !== requestedShadowSize || sunLight.shadow.mapSize.y !== requestedShadowSize)) {
-      sunLight.shadow.mapSize.set(requestedShadowSize, requestedShadowSize);
-      if (sunLight.shadow.map) {
-        sunLight.shadow.map.dispose();
-        sunLight.shadow.map = null;
-      }
-    }
     const half = q === 'ultra' ? 18 : q === 'high' ? 22 : 30;
     sunLight.shadow.camera.left = -half;
     sunLight.shadow.camera.right = half;
@@ -763,13 +801,6 @@ function applyGraphicsQuality(q) {
     sunLight.shadow.radius = q === 'ultra' ? 0.65 : q === 'high' ? 0.8 : 1.0;
     sunLight.shadow.camera.updateProjectionMatrix();
     sunLight.shadow.needsUpdate = true;
-  }
-  if (shadowsWereEnabled !== renderer.shadowMap.enabled || oldShadowType !== renderer.shadowMap.type) {
-    scene.traverse(obj => {
-      if (!obj.material) return;
-      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-      materials.forEach(material => { material.needsUpdate = true; });
-    });
   }
   renderer.shadowMap.needsUpdate = true;
 }
@@ -803,6 +834,22 @@ function addEnvironmentObstacle(x, z, w, d, h, opts = {}) {
   return mesh;
 }
 
+function buildConcreteBarrier(x, z, w = 3.2, d = 0.55, h = 1.15, rot = 0) {
+  const mesh = addEnvironmentObstacle(x, z, w, d, h, { color: 0x8a8a88, cover: true, rotation: rot });
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.15, w*0.12), 0.7, d+0.02), new THREE.MeshStandardMaterial({ color: 0xa3a3a0, roughness: 0.95 }));
+  stripe.position.set(x, 0.55, z); stripe.rotation.y = rot; stripe.castShadow = true; stripe.receiveShadow = true; scene.add(stripe);
+  return mesh;
+}
+
+
+
+
+
+
+
+
+
+
 const BUILDING_CELL = 7;
 const BUILDING_WALL_T = 0.4;
 const BUILDING_WALL_H = 3.1;
@@ -814,6 +861,7 @@ const BUILDING_DIRS = [
   { dx: 0, dz: 1 },
   { dx: 0, dz: -1 }
 ];
+
 
 const BUILDING_STYLES = {
   bunker: {
@@ -848,6 +896,11 @@ function shuffleArr(arr) {
   return a;
 }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+
+
+
+
 
 function generateBuildingLayout() {
   const cells = new Set();
@@ -887,6 +940,7 @@ function generateBuildingLayout() {
     }
   }
 
+  
   const degree = new Map();
   for (const ck of cells) degree.set(ck, 0);
   for (const dk of doors) {
@@ -897,6 +951,9 @@ function generateBuildingLayout() {
 
   return { cells, doors, start, degree };
 }
+
+
+
 
 function assignBuildingRoles(layout) {
   const roles = new Map();
@@ -930,6 +987,10 @@ function buildingLocalToWorld(center, rot, lx, lz) {
   return { x: center.x + lx * c + lz * s, z: center.z - lx * s + lz * c };
 }
 
+
+
+
+
 function addBuildingWallSegment(cx, cz, w, d, h, rotation, color) {
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9 + Math.random() * 0.06, metalness: 0.0 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -955,6 +1016,9 @@ function addBuildingWallSegment(cx, cz, w, d, h, rotation, color) {
   return mesh;
 }
 
+
+
+
 function addBuildingDecor(cx, cz, w, d, h, baseY, rotation, color, opts) {
   opts = opts || {};
   const matOpts = { color, roughness: opts.roughness ?? 0.85, metalness: opts.metalness ?? 0.0 };
@@ -979,6 +1043,15 @@ function addBuildingPitchedRoof(cx, cz, span, baseY, rotation, color) {
     geometry: geo, extraYaw: Math.PI / 4, roughness: 0.82
   });
 }
+
+
+
+
+
+
+
+
+
 
 function maybeAddWindowPane(cx, cz, w, d, rotation, style) {
   if (Math.random() >= style.windowChance) return;
@@ -1035,6 +1108,9 @@ function buildBuildingWallSide(gx, gz, d, center, rot, carveDoor, style, allowRu
   addBuildingDecor(hp.x, hp.z, hw, hd, headerH, BUILDING_DOOR_H, rot, style.trim, { roughness: 0.88 });
 }
 
+
+
+
 function addBuildingCornerPosts(gx, gz, center, rot, style, postH) {
   const half = BUILDING_CELL / 2 + BUILDING_WALL_T * 0.15;
   const corners = [[-half, -half], [half, -half], [half, half], [-half, half]];
@@ -1044,6 +1120,8 @@ function addBuildingCornerPosts(gx, gz, center, rot, style, postH) {
     addBuildingDecor(wp.x, wp.z, 0.32, 0.32, postH, 0, rot, style.pillar, { roughness: 0.8 });
   }
 }
+
+
 
 function addBuildingClutter(gx, gz, center, rot, style) {
   const count = Math.random() < 0.55 ? (Math.random() < 0.3 ? 2 : 1) : 0;
@@ -1115,12 +1193,16 @@ function buildBuildingFromLayout(layout, center, rot, style) {
   }
 }
 
+
+
+
 function buildBuildingWallSideScaled(gx, gz, d, center, rot, carveDoor, style, allowRuin, protectedSet, wallH) {
   if (Math.abs(wallH - BUILDING_WALL_H) < 0.01) {
     buildBuildingWallSide(gx, gz, d, center, rot, carveDoor, style, allowRuin, protectedSet);
     return;
   }
-
+  
+  
   const cellLX = gx * BUILDING_CELL, cellLZ = gz * BUILDING_CELL;
   const boundLX = cellLX + d.dx * (BUILDING_CELL / 2);
   const boundLZ = cellLZ + d.dz * (BUILDING_CELL / 2);
@@ -1176,8 +1258,15 @@ function clearBuildings() {
   buildingParts = [];
 }
 
+
+
+
+
+
+
 function generateBuildings() {
   clearBuildings();
+  clearBuildingNpcs();
   if (CONFIG.buildingCount <= 0) { rebuildNpcNavigation(); return; }
 
   const spawnExclusion = { x: 0, z: 6, r: 20 };
@@ -1204,9 +1293,32 @@ function generateBuildings() {
     buildBuildingFromLayout(layout, { x: cx, z: cz }, rot, style);
     placed.push({ x: cx, z: cz, radius });
     built++;
+    spawnBuildingDummies(layout, { x: cx, z: cz }, rot);
   }
   rebuildNpcNavigation();
-} // this is 6 or so hours of trial + error and torture...
+}
+
+
+
+
+
+
+function spawnBuildingDummies(layout, center, rot) {
+  if (!CONFIG.buildingDummiesEnabled) return;
+  const roomCount = layout.cells.size;
+  const dummyCount = Math.max(1, Math.min(CONFIG.buildingDummiesMax, Math.round(roomCount * CONFIG.buildingDummiesPerRoom)));
+  const cells = shuffleArr(Array.from(layout.cells)).slice(0, dummyCount);
+  for (const ck of cells) {
+    const [gx, gz] = ck.split(',').map(Number);
+    const jitterR = BUILDING_CELL * 0.22 * Math.random();
+    const jitterA = Math.random() * Math.PI * 2;
+    const lx = gx * BUILDING_CELL + Math.cos(jitterA) * jitterR;
+    const lz = gz * BUILDING_CELL + Math.sin(jitterA) * jitterR;
+    const worldPos = buildingLocalToWorld(center, rot, lx, lz);
+    const npc = spawnNPC(worldPos.x, worldPos.z, Math.random() * Math.PI * 2, true);
+    chooseNpcWanderTarget(npc, false);
+  }
+}
 
 function rebuildNpcNavigation() {
   const step = 3.2;
@@ -1252,13 +1364,13 @@ function buildSky() {
   grad.addColorStop(1, '#eeddb4');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Distant dusty haze band near the horizon
+  
   const hazeGrad = ctx.createLinearGradient(0, canvas.height * 0.42, 0, canvas.height * 0.72);
   hazeGrad.addColorStop(0, 'rgba(214,190,145,0)');
   hazeGrad.addColorStop(1, 'rgba(214,190,145,0.55)');
   ctx.fillStyle = hazeGrad;
   ctx.fillRect(0, canvas.height * 0.4, canvas.width, canvas.height * 0.35);
-  // Faint low mountain silhouette
+  
   ctx.fillStyle = 'rgba(150,128,98,0.35)';
   ctx.beginPath();
   ctx.moveTo(0, canvas.height * 0.56);
@@ -1327,7 +1439,7 @@ function buildEnvironment() {
   scene.add(groundMesh);
   rayTargets.push(groundMesh);
 
-  // Dry, war-torn desert training yard with scattered rubble.
+  
   scatterDesertRubble();
 
   generateBuildings();
@@ -1338,11 +1450,11 @@ function makeDesertTexture(size) {
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  // Layered sun-baked sand base.
+  
   ctx.fillStyle = '#c5a16a';
   ctx.fillRect(0, 0, size, size);
 
-  // Broad color variation.
+  
   for (let i = 0; i < 130; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
@@ -1360,7 +1472,7 @@ function makeDesertTexture(size) {
     ctx.fill();
   }
 
-  // Small dusty clumps and fine grain.
+  
   for (let i = 0; i < 24000; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
@@ -1373,7 +1485,7 @@ function makeDesertTexture(size) {
     ctx.fillRect(x, y, r, r);
   }
 
-  // Irregular dry cracks.
+  
   ctx.lineWidth = 1;
   for (let i = 0; i < 65; i++) {
     let x = Math.random() * size;
@@ -1390,7 +1502,7 @@ function makeDesertTexture(size) {
     ctx.stroke();
   }
 
-  // Faint vehicle/foot scuffs.
+  
   for (let i = 0; i < 12; i++) {
     const y = Math.random() * size;
     ctx.strokeStyle = 'rgba(72,53,33,0.08)';
@@ -1405,7 +1517,7 @@ function makeDesertTexture(size) {
     ctx.stroke();
   }
 
-  // Embedded stones and pebble clusters.
+  
   for (let i = 0; i < 520; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
@@ -1423,8 +1535,8 @@ function makeDesertTexture(size) {
     ctx.fill();
   }
 
-  // Short wind-shaped sand ripples add readable surface direction without
-  // turning the yard into a repetitive grid.
+  
+  
   ctx.lineCap = 'round';
   for (let i = 0; i < 180; i++) {
     const x = Math.random() * size;
@@ -1455,7 +1567,7 @@ function makeDesertBumpTexture(size) {
   ctx.fillStyle = '#d6d6d6';
   ctx.fillRect(0, 0, size, size);
 
-  // Low-contrast height variation so the ground catches light without becoming visibly bumpy.
+  
   for (let i = 0; i < 3200; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
@@ -1471,7 +1583,7 @@ function makeDesertBumpTexture(size) {
   }
 
 
-  // Fine compacted grains and shallow crack grooves provide close-range detail.
+  
   for (let i = 0; i < 18000; i++) {
     const v = 190 + Math.floor(Math.random() * 55);
     ctx.fillStyle = `rgb(${v},${v},${v})`;
@@ -1511,7 +1623,7 @@ function scatterDesertRubble() {
     return false;
   };
 
-  // Small rocks, scattered widely, as one instanced mesh for performance.
+  
   const rockCount = 520;
   const rockGeo = new THREE.DodecahedronGeometry(1, 0);
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x8a765a, roughness: 1.0, metalness: 0.0, flatShading: true });
@@ -1537,7 +1649,7 @@ function scatterDesertRubble() {
   rockMesh.instanceMatrix.needsUpdate = true;
   scene.add(rockMesh);
 
-  // Dry sticks/branches, thin scattered cylinders lying on the ground.
+  
   const stickCount = 180;
   const stickGeo = new THREE.CylinderGeometry(1, 1, 1, 5);
   const stickMat = new THREE.MeshStandardMaterial({ color: 0x5a4326, roughness: 1.0, metalness: 0.0 });
@@ -1563,7 +1675,7 @@ function scatterDesertRubble() {
   stickMesh.instanceMatrix.needsUpdate = true;
   scene.add(stickMesh);
 
-  // A handful of larger rubble chunks (broken concrete/rock clusters) for war-torn feel.
+  
   const chunkGeo = new THREE.DodecahedronGeometry(1, 0);
   const chunkMat = new THREE.MeshStandardMaterial({ color: 0x8f8a7e, roughness: 0.97, metalness: 0.0, flatShading: true });
   for (let i = 0; i < 32; i++) {
@@ -1580,8 +1692,8 @@ function scatterDesertRubble() {
     scene.add(chunk);
   }
 
-  // Dense small fragments add close-up variety without adding hundreds of
-  // separate draw calls. These pieces are decorative and remain non-blocking.
+  
+  
   const fragmentCount = 150;
   const fragmentGeo = new THREE.BoxGeometry(1, 1, 1);
   const fragmentMat = new THREE.MeshStandardMaterial({ color: 0x77736a, roughness: 0.94, metalness: 0.02 });
@@ -1700,9 +1812,9 @@ function initPhysics() {
   groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
   world.addBody(groundBody);
 
-  // Ragdoll collision audio is attached per-body in buildRagdoll().  Cannon's
-  // body collide event exposes the actual contact and impact velocity, which is
-  // more reliable than inferring impact strength from the post-step velocities.
+  
+  
+  
 }
 
 const BONE = {
@@ -1827,9 +1939,9 @@ function buildHumanoid(withGun) {
     let gunGroup = null;
     if (isGunArm && withGun) {
       gunGroup = buildPistol();
-      // Seat the pistol grip inside the palm instead of attaching its origin
-      // to the wrist.  The hand now stays visibly wrapped around the grip in
-      // both low-ready and aimed poses.
+      
+      
+      
       gunGroup.position.set(0, -0.105, -0.022);
       gunGroup.rotation.set(-Math.PI / 2, 0, 0);
       handPivot.add(gunGroup);
@@ -1918,6 +2030,10 @@ function buildPistol() {
   g.add(slide);
   g.userData.slide = slide;
 
+  const neonStrip = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.01, 0.18), glowMat);
+  neonStrip.position.set(0, 0.075, -0.02);
+  g.add(neonStrip);
+
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.055), metalMat);
   grip.position.set(0, -0.02, 0.06);
   grip.rotation.x = 0.28;
@@ -1929,8 +2045,8 @@ function buildPistol() {
   g.add(barrel);
 
   g.userData.muzzleLocalPos = new THREE.Vector3(0, 0.05, -0.18);
-  // The support palm belongs around the grip, close to the firing wrist.  The
-  // previous forward offset exceeded the left arm's reach and caused curling.
+  
+  
   g.userData.supportGripLocal = new THREE.Vector3(-0.060, -0.030, 0.100);
   g.userData.ejectLocalPos = new THREE.Vector3(0.028, 0.078, -0.03);
   g.userData.ejectLocalDir = new THREE.Vector3(1, 0.6, 0.45).normalize();
@@ -2023,8 +2139,8 @@ function applyPlayerMilitaryGear(h) {
   const gloveMat = new THREE.MeshStandardMaterial({ color: 0x3e392d, roughness: 0.98, metalness: 0.0 });
   const helmetMat = new THREE.MeshStandardMaterial({ color: 0x8c7549, roughness: 0.9, metalness: 0.0 });
 
-  // Replace shared clothing/limb materials across every small joint mesh too.
-  // The head and its neck joint remain skin; hands are changed to gloves below.
+  
+  
   h.root.traverse(obj => {
     if (!obj.isMesh) return;
     if (obj.material === originalShirtMat || obj.material === originalTrouserMat) obj.material = camoMat;
@@ -2045,24 +2161,24 @@ function applyPlayerMilitaryGear(h) {
   h.spine.add(torsoGear);
   h.hips.add(beltGear);
 
-  // Rounded carrier body, front/back armor panels, shoulder straps and pouches.
+  
   const carrier = createStretchedSphere(0.205, 0.205, 0.145, vestMat);
   carrier.position.set(0, 0.285, 0);
   torsoGear.add(carrier);
   addGearMesh(torsoGear, new THREE.BoxGeometry(0.29, 0.27, 0.035), webbingMat, new THREE.Vector3(0, 0.30, -0.151));
   addGearMesh(torsoGear, new THREE.BoxGeometry(0.29, 0.27, 0.030), vestMat, new THREE.Vector3(0, 0.30, 0.151));
-  // Narrow front/back webbing joined by top straps that sit inside the actual
-  // shoulder joints instead of passing through the arms.
+  
+  
   for (const side of [-1, 1]) {
     addGearMesh(torsoGear, new THREE.BoxGeometry(0.045, 0.31, 0.036), webbingMat, new THREE.Vector3(side * 0.118, 0.315, -0.158));
     addGearMesh(torsoGear, new THREE.BoxGeometry(0.045, 0.27, 0.034), webbingMat, new THREE.Vector3(side * 0.118, 0.325, 0.158));
     addGearMesh(torsoGear, new THREE.BoxGeometry(0.062, 0.032, 0.285), vestMat, new THREE.Vector3(side * 0.118, 0.468, 0));
   }
-  // Cohesive MOLLE rows across the plate face.
+  
   for (let row = 0; row < 4; row++) {
     addGearMesh(torsoGear, new THREE.BoxGeometry(0.255, 0.012, 0.010), webbingMat, new THREE.Vector3(0, 0.245 + row * 0.045, -0.174));
   }
-  // Low-profile buckles and cable routing make the carrier read as assembled gear.
+  
   for (const side of [-1, 1]) {
     addGearMesh(torsoGear, new THREE.BoxGeometry(0.030, 0.022, 0.018), helmetMat, new THREE.Vector3(side * 0.092, 0.405, -0.182));
     addGearMesh(torsoGear, new THREE.CylinderGeometry(0.006, 0.006, 0.22, 6), webbingMat, new THREE.Vector3(side * 0.142, 0.330, -0.174), new THREE.Vector3(0, 0, 0.08 * side));
@@ -2089,7 +2205,7 @@ function applyPlayerMilitaryGear(h) {
   addGearMesh(beltGear, new THREE.CylinderGeometry(0.055, 0.055, 0.135, 12), vestMat, new THREE.Vector3(0.195, -0.060, 0.015));
   addGearMesh(beltGear, new THREE.BoxGeometry(0.085, 0.16, 0.075), webbingMat, new THREE.Vector3(0.165, -0.105, -0.085), new THREE.Vector3(0.10, 0, -0.08));
 
-  // Helmet follows the head and automatically disappears with it in first person.
+  
   const helmet = new THREE.Mesh(
     new THREE.SphereGeometry(BONE.headR * 1.12, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.62),
     helmetMat
@@ -2106,17 +2222,17 @@ function applyPlayerMilitaryGear(h) {
   addGearMesh(h.parts.head, new THREE.BoxGeometry(0.065, 0.050, 0.025), webbingMat, new THREE.Vector3(0, 0.072, -0.145));
   addGearMesh(h.parts.head, new THREE.BoxGeometry(0.028, 0.035, 0.032), helmetMat, new THREE.Vector3(0, 0.042, -0.168));
 
-  // Gloves use rounded cuffs only so the hand silhouette stays coherent.
+  
   addGearMesh(h.pivots.lHand, new THREE.CylinderGeometry(0.067, 0.061, 0.065, 12), gloveMat, new THREE.Vector3(0, -0.005, 0));
   addGearMesh(h.pivots.rHand, new THREE.CylinderGeometry(0.067, 0.061, 0.065, 12), gloveMat, new THREE.Vector3(0, -0.005, 0));
 
-  // Knee pads move with the shins and remain hidden with the legs in first person.
+  
   addGearMesh(h.pivots.lKnee, new THREE.BoxGeometry(0.135, 0.105, 0.045), vestMat, new THREE.Vector3(0, -0.035, -0.085), new THREE.Vector3(-0.12, 0, 0));
   addGearMesh(h.pivots.rKnee, new THREE.BoxGeometry(0.135, 0.105, 0.045), vestMat, new THREE.Vector3(0, -0.035, -0.085), new THREE.Vector3(-0.12, 0, 0));
 
-  // The first-person head is hidden from the view camera, so a transparent
-  // duplicate supplies only its depth to the sun's shadow pass. This keeps the
-  // full head and helmet shadow without letting either clip into the camera.
+  
+  
+  
   const headShadowProxy = h.parts.head.clone(true);
   const shadowOnlyMaterial = new THREE.MeshBasicMaterial({
     transparent: true,
@@ -2137,8 +2253,8 @@ function applyPlayerMilitaryGear(h) {
   h.parts.head.parent.add(headShadowProxy);
   h.headShadowProxy = headShadowProxy;
 
-  // Only the head shell is excluded from the first-person render. The full
-  // torso, gear, shoulders, arms and legs remain visible when looking down.
+  
+  
   h.firstPersonHidden = [h.parts.head];
   for (const object of h.firstPersonHidden) {
     if (!object) continue;
@@ -2166,8 +2282,8 @@ function setFirstPersonMode(enabled) {
     camera.near = CONFIG.firstPerson ? 0.06 : 0.06;
     camera.updateProjectionMatrix();
   }
-  // The shadow csamera always sees layer 1, so hidden firstperson body partsd
-  // continue casting a cdomplete player shadow on the environment.
+  
+  
   if (sunLight && sunLight.shadow && sunLight.shadow.camera) {
     sunLight.shadow.camera.layers.enable(1);
   }
@@ -2209,8 +2325,8 @@ function solvePlayerArmToTarget(m, side, targetWorld, bendHint = null) {
   if (rawDist < 1e-5) return null;
 
   const minDist = Math.abs(upperLen - forearmLen) + 0.012;
-  // Keep only a tiny safety bend so an aimed arm looks fully extended without
-  // putting the two-bone solver exactly on its unstable singularity.
+  
+  
   const maxDist = upperLen + forearmLen - 0.004;
   const dist = THREE.MathUtils.clamp(rawDist, minDist, maxDist);
   const dir = toTarget.normalize();
@@ -2290,8 +2406,8 @@ function makeStableAimQuaternion(directionWorld) {
   if (dir.lengthSq() < 1e-8) return new THREE.Quaternion();
   dir.normalize();
 
-  // The pistol's forward axis is local -Z.  Build an orthonormal basis with a
-  // stable world-up reference so pitch/yaw changes never introduce roll flips.
+  
+  
   let up = new THREE.Vector3(0, 1, 0);
   if (Math.abs(dir.dot(up)) > 0.985) up.set(0, 0, 1);
   const back = dir.clone().negate();
@@ -2348,8 +2464,8 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
 
   m.pivots.lHip.rotation.x = stride * hipAmp;
   m.pivots.rHip.rotation.x = opposite * hipAmp;
-  // The model faces local -Z. Knee flexion must oppose the forward thigh
-  // rotation so the shin trails behind the lifted leg instead of folding ahead.
+  
+  
   m.pivots.lKnee.rotation.x = -liftL * kneeAmp;
   m.pivots.rKnee.rotation.x = -liftR * kneeAmp;
   m.pivots.lKnee.rotation.y = 0;
@@ -2362,13 +2478,13 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
     m.pivots.lFoot.rotation.y = m.pivots.lFoot.rotation.z = 0;
     m.pivots.rFoot.rotation.y = m.pivots.rFoot.rotation.z = 0;
   }
-  // No lateral twist: knees remain centered directly below their hip pivots.
+  
   m.pivots.lHip.rotation.y = 0;
   m.pivots.rHip.rotation.y = 0;
   m.pivots.lHip.rotation.z = 0;
   m.pivots.rHip.rotation.z = 0;
 
-  // Natural resting pose: both arms hang beside the torso outside ADS.
+  
   const idleLShoulderX = -stride * armAmp;
   const idleRShoulderX = -opposite * armAmp;
   const idleLShoulderY = 0;
@@ -2391,9 +2507,9 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
   let targetLHandLocalQ = new THREE.Quaternion();
 
   if (player.gunGroup && weaponBlend > 0.0005) {
-    // Build every target in body space. Since the character root already owns
-    // camera yaw, left/right camera movement can no longer rotate the elbow's
-    // bend plane inward or make the arm cross the chest.
+    
+    
+    
     m.spine.updateWorldMatrix(true, true);
     const breath = Math.sin(performance.now() * 0.00165) * 0.003;
     const aimSway = Math.sin(performance.now() * 0.00105) * 0.0025;
@@ -2401,24 +2517,24 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
     const cameraDirLocal = new THREE.Vector3(0, -Math.sin(lookPitch), -Math.cos(lookPitch)).normalize();
     const pitchFollow = THREE.MathUtils.clamp(cameraDirLocal.y, -0.78, 0.78);
 
-    // Extend the wrist almost to the combined upper-arm/forearm length. The
-    // target moves vertically with camera pitch, so the arms follow the view
-    // direction instead of remaining at chest height or curling overhead.
+    
+    
+    
     const adsWristLocal = new THREE.Vector3(
       0.020 + aimSway,
       0.290 + pitchFollow * 0.330 + breath,
       -0.530 * Math.max(0.62, Math.cos(lookPitch))
     );
-    // Unaimed shots use a proper one-handed extension toward the reticle.
-    // The support arm stays in its normal side pose unless ADS is active.
+    
+    
     const oneHandWristLocal = new THREE.Vector3(
       0.040 + aimSway * 0.35,
       0.255 + pitchFollow * 0.290 + breath * 0.5,
       -0.545 * Math.max(0.66, Math.cos(lookPitch))
     );
     if (CONFIG.firstPerson) {
-      // Keep the sight line just below the crosshair while moving the pistol
-      // far enough forward that the slide, hands and forearms are all visible.
+      
+      
       adsWristLocal.x *= 0.35;
       adsWristLocal.y += 0.180;
       adsWristLocal.z -= 0.085;
@@ -2444,8 +2560,8 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
     const gunLocalQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0, 'XYZ'));
     const targetHandWorldQ = gunWorldQ.clone().multiply(gunLocalQ.clone().invert());
 
-    // Temporarily apply the complete right-arm target so the actual gun's
-    // support-grip world position can be calculated precisely.
+    
+    
     m.pivots.rShoulder.quaternion.copy(targetRShoulderQ);
     m.pivots.rElbow.quaternion.copy(targetRElbowQ);
     m.spine.updateWorldMatrix(true, true);
@@ -2469,7 +2585,7 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
         targetLElbowQ = leftSolved.elbowQ;
       }
 
-      // The support hand joins the grip only during deliberate aiming.
+      
       m.pivots.lShoulder.quaternion.copy(targetLShoulderQ);
       m.pivots.lElbow.quaternion.copy(targetLElbowQ);
       m.spine.updateWorldMatrix(true, true);
@@ -2481,8 +2597,8 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
     }
   }
 
-  // Blend the full chain for a smooth raise/lower transition. At aimBlend zero
-  // both arms and wrists are exactly back in their natural side poses.
+  
+  
   m.pivots.lShoulder.quaternion.slerpQuaternions(idleLShoulderQ, targetLShoulderQ, aimBlend);
   m.pivots.rShoulder.quaternion.slerpQuaternions(idleRShoulderQ, targetRShoulderQ, weaponBlend);
   m.pivots.lElbow.quaternion.slerpQuaternions(idleLElbowQ, targetLElbowQ, aimBlend);
@@ -2565,12 +2681,12 @@ function updatePlayer(dt, input) {
   m.root.position.copy(player.position);
   m.root.rotation.y = player.yaw;
 
-  // Raising is deliberate and responsive, while lowering is slightly softer
-  // so both hands release the sight picture without snapping to the side pose.
+  
+  
   const aimTransitionRate = player.aiming ? 11.5 : 7.5;
   player.aimBlend = THREE.MathUtils.damp(player.aimBlend, player.aiming ? 1 : 0, aimTransitionRate, dt);
-  // Finish the return exactly at the side pose instead of leaving a tiny
-  // residual ADS weight that holds the weapon hand forward.
+  
+  
   if (!player.aiming && player.aimBlend < 0.004) player.aimBlend = 0;
   player.oneHandFireTimer = Math.max(0, (player.oneHandFireTimer || 0) - dt);
   const oneHandFireActive = !player.aiming && player.oneHandFireTimer > 0;
@@ -2665,7 +2781,7 @@ function applyNpcWalkAnimation(npc, dt, moving, speed) {
   m.spine.rotation.z = -m.hips.rotation.z * 0.5;
   m.spine.rotation.x = Math.sin(phase * 0.5) * 0.012 * blend - 0.10 * run * blend;
 
-  // The leg moving forward drives the opposite arm backward, matching a normal forward gait.
+  
   m.pivots.lHip.rotation.x = stride * (0.30 + run * 0.14) * blend;
   m.pivots.rHip.rotation.x = opposite * (0.30 + run * 0.14) * blend;
   m.pivots.lKnee.rotation.x = liftL * (0.52 + run * 0.40) * blend;
@@ -2772,8 +2888,8 @@ function updateCamera(dt) {
   const smoothing = THREE.MathUtils.clamp(CONFIG.cameraSmoothing, 0.05, 1);
   const posRate = THREE.MathUtils.lerp(16, 4.0, smoothing);
   const lookRate = THREE.MathUtils.lerp(20, 5.0, smoothing);
-  // First person is body-locked so sprinting never leaves the camera trailing
-  // behind the character. Third person keeps the user-selected cinematic smoothing.
+  
+  
   const posLerp = CONFIG.firstPerson ? 1 : 1.0 - Math.pow(0.001, dt * posRate / 10);
   const lookLerp = CONFIG.firstPerson ? 1 : 1.0 - Math.pow(0.001, dt * lookRate / 10);
 
@@ -3024,7 +3140,7 @@ function collectRagdollExtras(npc) {
   }
 }
 
-function spawnNPC(x, z, yaw) {
+function spawnNPC(x, z, yaw, buildingSpawned) {
   const h = buildHumanoid(false);
   h.root.position.set(x, 0, z);
   h.root.rotation.y = yaw + Math.PI;
@@ -3042,12 +3158,17 @@ function spawnNPC(x, z, yaw) {
     model: h,
     origin: new THREE.Vector3(x, 0, z),
     yaw,
+    buildingSpawned: !!buildingSpawned,
     hp: 100,
     alive: true,
     deathTimer: 0,
     fallSaveTimer: 0,
     fallSaveDelay: 0,
     fallSaveJoints: null,
+    willWince: false,
+    stumbling: false,
+    stumbleTimer: 0,
+    stumbleSeed: 0,
     bodies: null,
     constraints: null,
     ragdollExtras: [],
@@ -3121,7 +3242,7 @@ function clearBloodDecals() {
 }
 
 function respawnNpc(npc) {
-  // Remove only this NPC's persistent blood pools when it is respawned.
+  
   for (let i = bloodPools.length - 1; i >= 0; i--) {
     const p = bloodPools[i];
     if (p.owner !== npc) continue;
@@ -3155,6 +3276,12 @@ function respawnNpc(npc) {
     if (mark.owner !== npc) continue;
     if (mark.mesh.parent) mark.mesh.parent.remove(mark.mesh);
     damageMarks.splice(i, 1);
+  }
+  for (let i = bulletHoles.length - 1; i >= 0; i--) {
+    const hole = bulletHoles[i];
+    if (hole.owner !== npc) continue;
+    if (hole.mesh.parent) hole.mesh.parent.remove(hole.mesh);
+    bulletHoles.splice(i, 1);
   }
   for (let i = goreDebris.length - 1; i >= 0; i--) {
     const debris = goreDebris[i];
@@ -3191,6 +3318,13 @@ function respawnNpc(npc) {
   npc.hitReactDistance = 0;
   npc.reactVelX = 0;
   npc.reactVelZ = 0;
+  npc.fallSaveTimer = 0;
+  npc.fallSaveDelay = 0;
+  npc.fallSaveJoints = null;
+  npc.willWince = false;
+  npc.stumbling = false;
+  npc.stumbleTimer = 0;
+  npc.stumbleSeed = 0;
 
   for (const name of Object.keys(PART_INFO)) {
     const mesh = npc.model.parts[name];
@@ -3236,8 +3370,9 @@ function respawnNpc(npc) {
 }
 
 function ensureNpcCount() {
-  while (npcs.length < CONFIG.npcCount) {
-    const idx = npcs.length;
+  const roamerCount = () => npcs.reduce((n, npc) => n + (npc.buildingSpawned ? 0 : 1), 0);
+  while (roamerCount() < CONFIG.npcCount) {
+    const idx = roamerCount();
     const cols = Math.max(2, Math.ceil(Math.sqrt(CONFIG.npcCount)));
     const row = Math.floor(idx / cols), col = idx % cols;
     const x = -((cols-1)*3.0)/2 + col*3.0;
@@ -3245,12 +3380,32 @@ function ensureNpcCount() {
     const npc = spawnNPC(x,z,Math.PI);
     chooseNpcWanderTarget(npc,false);
   }
-  while (npcs.length > CONFIG.npcCount) {
-    const npc = npcs.pop();
+  while (roamerCount() > CONFIG.npcCount) {
+    let idx = -1;
+    for (let i = npcs.length - 1; i >= 0; i--) { if (!npcs[i].buildingSpawned) { idx = i; break; } }
+    if (idx < 0) break;
+    const npc = npcs[idx];
+    npcs.splice(idx, 1);
     if (npc.bodies) destroyRagdoll(npc);
     scene.remove(npc.model.root);
     for (const part of Object.values(npc.model.parts || {})) { const hi=hittable.indexOf(part); if(hi>=0) hittable.splice(hi,1); }
-    for (const hb of npc.hitboxes || []) { scene.remove(hb); const i=rayTargets.indexOf(hb); if(i>=0) rayTargets.splice(i,1); const ai=allHitboxes.indexOf(hb); if(ai>=0) allHitboxes.splice(ai,1); }
+    for (const hb of npc.hitboxes || []) { scene.remove(hb); const i2=rayTargets.indexOf(hb); if(i2>=0) rayTargets.splice(i2,1); const ai=allHitboxes.indexOf(hb); if(ai>=0) allHitboxes.splice(ai,1); }
+  }
+  for (let i=0;i<npcs.length;i++) npcs[i].id=i;
+}
+
+
+
+
+function clearBuildingNpcs() {
+  for (let i = npcs.length - 1; i >= 0; i--) {
+    const npc = npcs[i];
+    if (!npc.buildingSpawned) continue;
+    npcs.splice(i, 1);
+    if (npc.bodies) destroyRagdoll(npc);
+    scene.remove(npc.model.root);
+    for (const part of Object.values(npc.model.parts || {})) { const hi=hittable.indexOf(part); if(hi>=0) hittable.splice(hi,1); }
+    for (const hb of npc.hitboxes || []) { scene.remove(hb); const i2=rayTargets.indexOf(hb); if(i2>=0) rayTargets.splice(i2,1); const ai=allHitboxes.indexOf(hb); if(ai>=0) allHitboxes.splice(ai,1); }
   }
   for (let i=0;i<npcs.length;i++) npcs[i].id=i;
 }
@@ -3297,27 +3452,27 @@ function applyNpcHitReaction(npc, dt) {
   const envelope = Math.sin(progress * Math.PI);
   const s = envelope * npc.hitReactStrength;
 
-  // Brief damped displacement makes the hit readable without launching the NPC or fighting gravity.
+  
   m.root.position.x += npc.reactVelX * dt;
   m.root.position.z += npc.reactVelZ * dt;
   npc.reactVelX *= Math.max(0, 1 - dt * 11);
   npc.reactVelZ *= Math.max(0, 1 - dt * 11);
 
   if (npc.hitReactType === 0) {
-    // Flinch.
+    
     m.spine.rotation.z += npc.hitReactDirection * 0.18 * s;
     m.pivots.rShoulder.rotation.z += npc.hitReactDirection * 0.18 * s;
     m.pivots.lShoulder.rotation.z += npc.hitReactDirection * 0.13 * s;
     m.pivots.rElbow.rotation.x -= 0.13 * s;
     m.pivots.lElbow.rotation.x += 0.035 * s;
   } else if (npc.hitReactType === 1) {
-    // Small stumble.
+    
     m.spine.rotation.z += npc.hitReactDirection * 0.23 * s;
     m.hips.rotation.z -= npc.hitReactDirection * 0.11 * s;
     m.pivots.lShoulder.rotation.x += 0.075 * s;
     m.pivots.rShoulder.rotation.x -= 0.075 * s;
   } else {
-    // Brief protective hunch.
+    
     m.spine.rotation.x -= 0.25 * s;
     m.neck.rotation.x += 0.075 * s;
     m.pivots.lShoulder.rotation.x -= 0.14 * s;
@@ -3338,6 +3493,7 @@ function handleNpcHit(mesh, hitPoint, hitDir) {
     spawnImpactParticles(hitPoint, hitDir, npc);
     registerBleedWound(npc, mesh, hitPoint, part, 0.65);
     spawnDamageMark(mesh, hitPoint, hitDir, part, npc);
+    spawnBulletHole(mesh, hitPoint, hitDir, part, npc);
     if (PART_INFO[part] && PART_INFO[part].kind === 'head') spawnHeadshotDebris(hitPoint, hitDir, npc);
     spawnBloodLandingDot(new THREE.Vector3(hitPoint.x, 0.012, hitPoint.z), 1.0, npc);
     registerRepeatedHit(npc, part);
@@ -3350,6 +3506,7 @@ function handleNpcHit(mesh, hitPoint, hitDir) {
   spawnImpactParticles(hitPoint, hitDir, npc);
   registerBleedWound(npc, mesh, hitPoint, part, info.kind === 'limb' ? 0.82 : 1.0);
   spawnDamageMark(mesh, hitPoint, hitDir, part, npc);
+  spawnBulletHole(mesh, hitPoint, hitDir, part, npc);
   if (info.kind === 'head') spawnHeadshotDebris(hitPoint, hitDir, npc);
   triggerNpcPanic(npc);
 
@@ -3385,7 +3542,7 @@ function registerBleedWound(npc, hitMesh, hitPoint, part, severity = 1) {
     part,
     localPoint,
     timer: 0.10 + Math.random() * 0.12,
-    remaining: Math.round((7 + Math.random() * 5) * severity),
+    remaining: Math.round((14 + Math.random() * 8) * severity),
     severity
   });
 }
@@ -3472,6 +3629,35 @@ function severRagdollJointForPart(npc, part) {
   const a = npc.bodies[joint.a], b = npc.bodies[joint.b];
   if (a && typeof a.wakeUp === 'function') a.wakeUp();
   if (b && typeof b.wakeUp === 'function') b.wakeUp();
+
+  
+  
+  
+  
+  
+  if (a && b) {
+    const outward = new THREE.Vector3(b.position.x - a.position.x, b.position.y - a.position.y, b.position.z - a.position.z);
+    if (outward.lengthSq() < 0.0001) outward.set(0, 1, 0); else outward.normalize();
+    const aQ = new THREE.Quaternion(a.quaternion.x, a.quaternion.y, a.quaternion.z, a.quaternion.w);
+    const jointWorld = new THREE.Vector3(joint.pivotA.x, joint.pivotA.y, joint.pivotA.z)
+      .applyQuaternion(aQ)
+      .add(new THREE.Vector3(a.position.x, a.position.y, a.position.z));
+
+    spawnImpactParticles(jointWorld, outward, npc);
+    spawnHeadshotDebris(jointWorld, outward, npc);
+    const aMesh = npc.model.parts[joint.a], bMesh = npc.model.parts[joint.b];
+    if (aMesh) spawnDamageMark(aMesh, jointWorld, outward, joint.a, npc);
+    if (bMesh) spawnDamageMark(bMesh, jointWorld, outward.clone().negate(), joint.b, npc);
+    spawnBloodPool(new THREE.Vector3(jointWorld.x, 0.009, jointWorld.z), 0.55, npc, CONFIG.bloodPoolDelay);
+
+    const kick = 2.2 * CONFIG.impactForceMultiplier;
+    b.velocity.x += outward.x * kick;
+    b.velocity.y += Math.max(0.3, outward.y) * kick * 0.6 + 0.4;
+    b.velocity.z += outward.z * kick;
+    b.angularVelocity.x += (Math.random() - 0.5) * kick;
+    b.angularVelocity.y += (Math.random() - 0.5) * kick;
+    b.angularVelocity.z += (Math.random() - 0.5) * kick;
+  }
 }
 
 function applyRagdollHit(npc, part, hitPoint, hitDir) {
@@ -3516,6 +3702,17 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
   npc.settled = false;
   npc.bloodPoolPending = null;
 
+  
+  
+  
+  
+  npc.willWince = Math.random() < CONFIG.wincingChance;
+  npc.stumbling = !isHeadshot && Math.random() < CONFIG.stumbleChance;
+  npc.stumbleTimer = npc.stumbling
+    ? CONFIG.stumbleDurationMin + Math.random() * (CONFIG.stumbleDurationMax - CONFIG.stumbleDurationMin)
+    : 0;
+  npc.stumbleSeed = Math.random() * Math.PI * 2;
+
   for (const name of Object.keys(PART_INFO)) {
     const mesh = npc.model.parts[name];
     if (!mesh) continue;
@@ -3532,9 +3729,9 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
   buildRagdoll(npc);
   collectRagdollExtras(npc);
 
-  // Fall-saving reflex: NPCs instinctively throw their arms out to brace
-  // their fall. This triggers unconditionally on every ragdoll event,
-  // including headshots — it's a pre-death reflex, not a conscious action.
+  
+  
+  
   npc.fallSaveTimer = CONFIG.fallSaveEnabled ? CONFIG.fallSaveDuration : 0;
   npc.fallSaveDelay = CONFIG.fallSaveEnabled ? 0.08 : 0;
   npc.fallSaveJoints = {
@@ -3557,6 +3754,18 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
     if (hitBody) addImpulse(hitBody, dir, 3.0);
     npc.bloodPoolPending = { radius: 0.8, timer: CONFIG.bloodPoolDelay };
   }
+
+  
+  
+  
+  const deathMesh = npc.model.parts[hitPart] || npc.model.parts.torso;
+  if (deathMesh) {
+    registerBleedWound(npc, deathMesh, hitPoint, hitPart, isHeadshot ? 1.4 : 1.15);
+  }
+  const torsoMesh = npc.model.parts.torso;
+  if (torsoMesh && hitPart !== 'torso') {
+    registerBleedWound(npc, torsoMesh, hitPoint, 'torso', 0.9);
+  }
 }
 
 function addImpulse(body, dir, mag) {
@@ -3572,17 +3781,17 @@ function addImpulse(body, dir, mag) {
   );
 }
 
-// Poses one arm chain (shoulder -> elbow -> hand) toward a brace direction
-// during the fall-save reflex. Earlier versions only rotated each limb body
-// in place and left the physics solver to catch up on position, which is
-// what caused the arms to visibly pop apart at the shoulder/elbow under
-// strong or fast corrections. This version instead does the joint math by
-// hand every frame  using the exact same local pivot offsets the ragdoll
-// was built with so the upper arm is re-anchored to the torso's actual
-// current shoulder position, and the forearm is re-anchored to the upper
-// arm's actual current elbow position. The chain can never separate because
-// each bone's position is derived from its parent rather than integrated
-// independently.
+
+
+
+
+
+
+
+
+
+
+
 const FALLSAVE_DOWN_AXIS = new THREE.Vector3(0, -1, 0);
 function poseArmChain(npc, side, targetUpperDir, targetForeDir, strength, dt) {
   const joints = npc.fallSaveJoints;
@@ -3599,15 +3808,15 @@ function poseArmChain(npc, side, targetUpperDir, targetForeDir, strength, dt) {
   const slerpAmt = Math.min(0.22, dt * Math.min(strength, 8));
   const holdDamp = Math.max(0, 1 - slerpAmt);
 
-  // Shoulder anchor: where the joint actually sits right now, per the torso's
-  // real position/orientation this frame.
+  
+  
   const torsoQuat = new THREE.Quaternion(torso.quaternion.x, torso.quaternion.y, torso.quaternion.z, torso.quaternion.w);
   const shoulderAnchor = new THREE.Vector3(shoulderJoint.pivotA.x, shoulderJoint.pivotA.y, shoulderJoint.pivotA.z)
     .applyQuaternion(torsoQuat)
     .add(new THREE.Vector3(torso.position.x, torso.position.y, torso.position.z));
 
-  // Slerp the upper arm's orientation toward the brace direction, then solve
-  // its position so its shoulder-side pivot lands exactly on the anchor.
+  
+  
   const upperQ = new THREE.Quaternion(upperBody.quaternion.x, upperBody.quaternion.y, upperBody.quaternion.z, upperBody.quaternion.w);
   const upperDown = FALLSAVE_DOWN_AXIS.clone().applyQuaternion(upperQ);
   const upperDelta = new THREE.Quaternion().setFromUnitVectors(upperDown, targetUpperDir);
@@ -3624,8 +3833,8 @@ function poseArmChain(npc, side, targetUpperDir, targetForeDir, strength, dt) {
   upperBody.angularVelocity.z *= holdDamp;
   if (typeof upperBody.wakeUp === 'function') upperBody.wakeUp();
 
-  // Elbow anchor: derived from the upper arm's brand-new transform, so the
-  // forearm always reconnects to where the upper arm actually ended up.
+  
+  
   const elbowAnchor = new THREE.Vector3(elbowJoint.pivotA.x, elbowJoint.pivotA.y, elbowJoint.pivotA.z)
     .applyQuaternion(upperQ)
     .add(newUpperPos);
@@ -3647,12 +3856,12 @@ function poseArmChain(npc, side, targetUpperDir, targetForeDir, strength, dt) {
   if (typeof foreBody.wakeUp === 'function') foreBody.wakeUp();
 }
 
-// Fall-saving reflex: while a ragdoll is airborne/falling, drive the arms to
-// reach out in the direction of travel (in front when falling forward,
-// behind when falling backward) as if bracing for impact. Runs purely on
-// the physics bodies, independent of hp/headshot state, and fades out
-// smoothly near the end of its window so the limbs relax back into a
-// normal ragdoll flop once the NPC has settled.
+
+
+
+
+
+
 function applyFallSave(npc, dt) {
   if (!npc.bodies) return;
   if (npc.fallSaveDelay > 0) { npc.fallSaveDelay -= dt; return; }
@@ -3685,11 +3894,57 @@ function applyFallSave(npc, dt) {
 }
 
 
-// Natural ragdoll joint limits.
-// These are enforced after Cannon's solver so extreme angular impulses cannot
-// fold the character through itself. Elbows/knees are treated as one-way
-// hinges: they can flex a long way, but they cannot hyperextend through the
-// opposite side. Shoulder/hip/neck joints use a looser cone + twist limit.
+
+
+
+
+
+function applyStumble(npc, dt) {
+  if (!npc.stumbling || !npc.bodies) return;
+  const torso = npc.bodies.torso, pelvis = npc.bodies.pelvis;
+  if (!torso || !pelvis) { npc.stumbling = false; return; }
+
+  npc.stumbleTimer -= dt;
+  if (npc.stumbleTimer <= 0) { npc.stumbling = false; return; }
+
+  const fade = THREE.MathUtils.clamp(npc.stumbleTimer / 0.25, 0, 1);
+  const strength = THREE.MathUtils.clamp(CONFIG.stumbleStrength, 0, 3) * fade;
+  const worldUp = new THREE.Vector3(0, 1, 0);
+
+  for (const body of [torso, pelvis]) {
+    
+    body.velocity.y += CONFIG.gravityStrength * 0.55 * strength * dt;
+
+    
+    
+    const q = new THREE.Quaternion(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+    const localUp = worldUp.clone().applyQuaternion(q);
+    const axis = new THREE.Vector3().crossVectors(localUp, worldUp);
+    const tilt = axis.length();
+    if (tilt > 0.0001) {
+      axis.normalize().multiplyScalar(tilt * 9.0 * strength);
+      body.torque.x += axis.x;
+      body.torque.y += axis.y;
+      body.torque.z += axis.z;
+    }
+    body.angularVelocity.x *= Math.max(0, 1 - dt * 3.0 * strength);
+    body.angularVelocity.z *= Math.max(0, 1 - dt * 3.0 * strength);
+    if (typeof body.wakeUp === 'function') body.wakeUp();
+  }
+
+  
+  
+  const t = CONFIG.stumbleDurationMax - npc.stumbleTimer;
+  torso.velocity.x += Math.sin(t * 14 + npc.stumbleSeed) * 0.6 * strength * dt;
+  torso.velocity.z += Math.cos(t * 11 + npc.stumbleSeed) * 0.6 * strength * dt;
+}
+
+
+
+
+
+
+
 const DEG = Math.PI / 180;
 const RAGDOLL_JOINT_LIMITS = {
   'pelvis:torso':     { maxSwing: 28 * DEG, twistAxis: new CANNON.Vec3(0, 1, 0), twistMin: -22 * DEG, twistMax: 22 * DEG },
@@ -3698,8 +3953,8 @@ const RAGDOLL_JOINT_LIMITS = {
   'torso:rUpperArm': { maxSwing: 82 * DEG, twistAxis: new CANNON.Vec3(0, 1, 0), twistMin: -70 * DEG, twistMax: 70 * DEG },
   'pelvis:lThigh':   { maxSwing: 72 * DEG, twistAxis: new CANNON.Vec3(0, 1, 0), twistMin: -42 * DEG, twistMax: 42 * DEG },
   'pelvis:rThigh':   { maxSwing: 72 * DEG, twistAxis: new CANNON.Vec3(0, 1, 0), twistMin: -42 * DEG, twistMax: 42 * DEG },
-  // Local X is the model's elbow/knee hinge axis. The asymmetric limits keep
-  // the joint from rotating through the anatomically wrong side.
+  
+  
   'lUpperArm:lForearm': { maxSwing: 18 * DEG, twistAxis: new CANNON.Vec3(1, 0, 0), twistMin: -8 * DEG, twistMax: 138 * DEG },
   'rUpperArm:rForearm': { maxSwing: 18 * DEG, twistAxis: new CANNON.Vec3(1, 0, 0), twistMin: -8 * DEG, twistMax: 138 * DEG },
   'lThigh:lShin':       { maxSwing: 16 * DEG, twistAxis: new CANNON.Vec3(1, 0, 0), twistMin: -7 * DEG, twistMax: 145 * DEG },
@@ -3761,10 +4016,10 @@ function limitRagdollJoint(bodyA, bodyB, joint, limit) {
   const exceeded = 1 - Math.abs(qb.dot(targetQ));
   if (exceeded < 0.00002) return;
 
-  // IMPORTANT: do not teleport the body position here. The point-to-point
-  // constraint is responsible for keeping the joint anchored. Teleporting both
-  // rotation and position after the solver was the source of the old launch/ping
-  // behaviour. A small rotational correction plus angular damping is much safer.
+  
+  
+  
+  
   const correction = Math.min(0.28, 0.10 + exceeded * 8.0);
   qb.slerp(targetQ, correction);
   bodyB.quaternion.set(qb.x, qb.y, qb.z, qb.w);
@@ -3776,8 +4031,8 @@ function limitRagdollJoint(bodyA, bodyB, joint, limit) {
 
 function enforceRagdollJointLimits(npc) {
   if (!CONFIG.ragdollJointLimits || !npc.bodies || !npc.ragdollJoints) return;
-  // Two passes lets a corrected parent settle the child chain without making
-  // the constraints feel rigid. Humanity has enough rigid joints already.
+  
+  
   for (let pass = 0; pass < 1; pass++) {
     for (const joint of npc.ragdollJoints) {
       const limit = RAGDOLL_JOINT_LIMITS[`${joint.a}:${joint.b}`];
@@ -3792,13 +4047,13 @@ function buildRagdoll(npc) {
   const worldPos = new THREE.Vector3();
   const worldQuat = new THREE.Quaternion();
 
-  // IMPORTANT: capture the complete animated pose BEFORE detaching anything.
-  // The old implementation detached each body as it created it. Because the
-  // NPC is built from nested Groups, changing one parent during that loop can
-  // make later parts resolve their transforms from a slightly different
-  // hierarchy. That is the source of the ugly "stand upright, then ragdoll"
-  // pop. A single pose snapshot gives every physics body the exact pose the
-  // player saw on the frame of impact.
+  
+  
+  
+  
+  
+  
+  
   const pose = {};
   for (const name of Object.keys(RAGDOLL_SHAPES)) {
     const mesh = npc.model.parts[name];
@@ -3811,14 +4066,14 @@ function buildRagdoll(npc) {
     };
   }
 
-  // Preserve the NPC's current movement through the handoff. The animated
-  // NPC is kinematic, so without this the ragdoll starts from rest and the
-  // transition feels like a freeze followed by a physics launch.
+  
+  
+  
   const inheritedVelocity = CONFIG.ragdollInheritVelocity
     ? new CANNON.Vec3(npc.velocityX || 0, 0, npc.velocityZ || 0)
     : new CANNON.Vec3(0, 0, 0);
 
-  // First create ALL bodies from the same frozen pose snapshot.
+  
   for (const name of Object.keys(RAGDOLL_SHAPES)) {
     const mesh = npc.model.parts[name];
     const p = pose[name];
@@ -3838,7 +4093,7 @@ function buildRagdoll(npc) {
     body.position.set(p.position.x, p.position.y, p.position.z);
     body.quaternion.set(p.quaternion.x, p.quaternion.y, p.quaternion.z, p.quaternion.w);
 
-    // Carry walking/running momentum into the physics simulation.
+    
     body.velocity.set(inheritedVelocity.x, inheritedVelocity.y, inheritedVelocity.z);
 
     body.linearDamping = CONFIG.ragdollStability ? Math.max(0.16, CONFIG.ragdollLinearDamping) : CONFIG.ragdollLinearDamping;
@@ -3848,7 +4103,12 @@ function buildRagdoll(npc) {
     body.sleepTimeLimit = CONFIG.ragdollStability ? 0.55 : 0.7;
 
     body.collisionFilterGroup = GROUP_RAGDOLL;
-    body.collisionFilterMask = GROUP_GROUND | GROUP_RAGDOLL;
+    
+    
+    
+    
+    
+    body.collisionFilterMask = GROUP_GROUND;
 
     body.userData = { npc, ragdollPart: name };
     body.addEventListener('collide', (event) => {
@@ -3889,9 +4149,9 @@ function buildRagdoll(npc) {
     bodies[name] = body;
   }
 
-  // Only after every body has been created do we detach the visible meshes.
-  // scene.attach preserves their current world transform, so there is no
-  // intermediate upright/default-pose frame rendered to the player.
+  
+  
+  
   for (const name of Object.keys(RAGDOLL_SHAPES)) {
     const mesh = npc.model.parts[name];
     if (!mesh || !bodies[name]) continue;
@@ -3921,8 +4181,8 @@ function buildRagdoll(npc) {
     const bodyA = bodies[j.a], bodyB = bodies[j.b];
     if (!bodyA || !bodyB || !j.pivot) continue;
 
-    // Calculate the joint from the original animated hierarchy, before any
-    // later animation/physics frame can change the visible pose.
+    
+    
     j.pivot.getWorldPosition(jointWorld);
 
     const pivotA = jointWorld.clone().sub(new THREE.Vector3(bodyA.position.x, bodyA.position.y, bodyA.position.z));
@@ -4093,8 +4353,8 @@ function applyRagdollStability(npc, dt) {
     npc.settledTimer = 0;
   }
 
-  // Once the whole body has settled, keep the settled state latched. It should
-  // not flicker on/off because a hand rocks a few centimeters.
+  
+  
   if (npc.settled && !quiet) {
     const disturbed = avgLinear > 0.75 || avgAngular > 1.0;
     if (disturbed) {
@@ -4125,8 +4385,8 @@ function applySecondaryBodyMotion(npc, dt) {
   const speed = Math.hypot(torso.velocity.x, torso.velocity.y, torso.velocity.z);
   if (speed < 0.25) return;
 
-  // Very small counter-motion while airborne/rolling. This adds secondary
-  // mass movement without steering the main fall or fighting the constraints.
+  
+  
   const phase = (npc.walkTime || 0) * 0.7 + (torso.position.y || 0);
   const scale = Math.min(1, speed / 5.0) * 0.18;
   torso.torque.z += Math.sin(phase * 1.3) * scale;
@@ -4198,8 +4458,8 @@ function applyPainWrithing(npc, dt) {
   const fade = Math.min(1, npc.painTimer / 0.30) * amp;
   const cadence = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(w * 0.31 + npc.id));
 
-  // Subtle whole-body struggling. This is intentionally low-force so the solver,
-  // rather than a scripted animation, remains in charge of the final pose.
+  
+  
   torso.torque.x += Math.sin(w * 1.05) * 0.95 * fade;
   torso.torque.y += Math.sin(w * 0.69 + 1.2) * 0.24 * fade;
   torso.torque.z += Math.cos(w * 0.89) * 0.72 * fade;
@@ -4369,8 +4629,10 @@ function updateNpcs(dt) {
         }
       }
       if (CONFIG.fallSaveEnabled) applyFallSave(npc, dt);
+      if (npc.stumbling) applyStumble(npc, dt);
       applyRagdollStability(npc, dt);
       applySecondaryBodyMotion(npc, dt);
+      if (npc.willWince) applyPainWrithing(npc, dt);
       if (CONFIG.ragdollJointLimits && !(CONFIG.ragdollLooseSettling && npc.settled)) enforceRagdollJointLimits(npc);
       for (const name in npc.bodies) {
         const body = npc.bodies[name];
@@ -4435,7 +4697,7 @@ function buildMuzzleFlash() {
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d');
   const cx = 64, cy = 64;
-  // Core hot glow
+  
   const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 62);
   grad.addColorStop(0, 'rgba(255, 255, 245, 1)');
   grad.addColorStop(0.14, 'rgba(255, 240, 185, 1)');
@@ -4479,8 +4741,8 @@ function buildMuzzleFlash() {
   muzzleSprite.scale.set(0.001, 0.001, 0.001);
   if (player.gunGroup) player.gunGroup.add(muzzleSprite);
 
-  // A short three-dimensional flame jet makes the shot readable from the side
-  // and in first person instead of relying only on a point light or billboard.
+  
+  
   muzzleConeMat = new THREE.MeshBasicMaterial({
     color: 0xffa23a,
     transparent: true,
@@ -4561,7 +4823,7 @@ function getSmokeTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 64;
   const ctx = canvas.getContext('2d');
-  // Soft irregular puff built from a few overlapping radial blobs for a less "perfect circle" look
+  
   const blobs = [[32,32,26],[22,26,16],[42,24,15],[30,42,17],[24,38,13]];
   for (const [bx, by, br] of blobs) {
     const grad = ctx.createRadialGradient(bx, by, 1, bx, by, br);
@@ -4584,7 +4846,7 @@ function spawnMuzzleSmoke() {
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(worldQuat).normalize();
   active.localToWorld(wp.copy(active.userData.muzzleLocalPos));
 
-  // Fast, pressurized muzzle burst: dense near the barrel, then rapidly expanding and settling.
+  
   const puffCount = 10 + Math.floor(Math.random() * 6);
   for (let i = 0; i < puffCount; i++) {
     while (muzzleSmoke.length >= MAX_MUZZLE_SMOKE) {
@@ -4605,7 +4867,7 @@ function spawnMuzzleSmoke() {
     const size = 0.044 + Math.random() * 0.042;
     smoke.scale.set(size, size, size);
 
-    // Start tightly packed at the muzzle, with only a tiny randomized offset.
+    
     smoke.position.copy(wp)
       .addScaledVector(forward, 0.02 + Math.random() * 0.05)
       .add(new THREE.Vector3(
@@ -4615,7 +4877,7 @@ function spawnMuzzleSmoke() {
       ));
     scene.add(smoke);
 
-    // Violent initial blast: smoke is kicked out of the barrel almost immediately.
+    
     const forwardBurst = 5.2 + Math.random() * 2.8;
     const lateral = new THREE.Vector3(
       (Math.random() - 0.5) * 1.45,
@@ -4667,12 +4929,12 @@ function updateMuzzleFlash(dt) {
     p.age += dt;
 
     if (p.age < p.burstTime) {
-      // Preserve the initial propellant jet briefly.
+      
       const burstT = p.age / p.burstTime;
       const drag = 0.05 + burstT * 0.16;
       p.vel.multiplyScalar(Math.max(0, 1 - dt * drag));
     } else {
-      // Rapid pressure loss, then a gentle upward drift as the smoke disperses.
+      
       p.vel.multiplyScalar(Math.max(0, 1 - dt * 7.5));
       p.vel.y += dt * 0.16;
     }
@@ -4717,6 +4979,8 @@ let bloodParticleGeoSmall, bloodParticleGeoLarge, bloodDotGeo;
 let bloodParticleMatSmall, bloodParticleMatLarge, bloodDotMat;
 let damagePatchGeo, damagePatchMat, debrisGeo, debrisMat, debrisGeoSmall;
 let bloodReflectMat, bloodDotReflectMat;
+let bulletHoleGeo, bulletHoleRimGeo, bulletHoleMat, bulletHoleRimMat;
+let bloodDripGeo, bloodDripMat;
 
 function ensureBloodAssets() {
   if (bloodParticleGeoSmall) return;
@@ -4727,9 +4991,9 @@ function ensureBloodAssets() {
   bloodParticleMatLarge = makeBloodMaterial(0.74);
   bloodDotMat = makeBloodMaterial(0.62);
 
-  // A very small embedded patch is used instead of a flat billboard/decal.
-  // Most of the volume sits inside the hit mesh, leaving only a shallow visible
-  // surface mark. This prevents the old floating-disc look on curved bodies.
+  
+  
+  
   damagePatchGeo = new THREE.SphereGeometry(1, 8, 6);
   damagePatchMat = new THREE.MeshPhysicalMaterial({
     color: 0x4a0d10, roughness: 0.34, metalness: 0.0,
@@ -4737,8 +5001,30 @@ function ensureBloodAssets() {
     transparent: true, opacity: 0.82, depthWrite: false
   });
 
-  // Shared low-poly impact debris. It is deliberately generic rather than an
-  // anatomical fragment, keeping the effect visually physical without graphic tissue detail.
+  
+  
+  bloodDripGeo = new THREE.SphereGeometry(1, 6, 5);
+  bloodDripMat = new THREE.MeshPhysicalMaterial({
+    color: 0x5a0f13, roughness: 0.28, metalness: 0.0,
+    clearcoat: 0.25, clearcoatRoughness: 0.15,
+    transparent: true, opacity: 0.78, depthWrite: false
+  });
+
+  
+  
+  bulletHoleGeo = new THREE.CircleGeometry(1, 10);
+  bulletHoleRimGeo = new THREE.RingGeometry(0.62, 1, 10);
+  bulletHoleMat = new THREE.MeshStandardMaterial({
+    color: 0x0c0a09, roughness: 0.55, metalness: 0.05,
+    transparent: true, opacity: 0.92, depthWrite: false
+  });
+  bulletHoleRimMat = new THREE.MeshStandardMaterial({
+    color: 0x2a1210, roughness: 0.7, metalness: 0.0,
+    transparent: true, opacity: 0.6, depthWrite: false
+  });
+
+  
+  
   debrisGeo = new THREE.DodecahedronGeometry(1, 0);
   debrisGeoSmall = new THREE.TetrahedronGeometry(1, 0);
   debrisMat = new THREE.MeshPhysicalMaterial({
@@ -4797,16 +5083,16 @@ function spawnDamageMark(hitMesh, hitPoint, hitDir, part, ownerNpc) {
   hitMesh.updateWorldMatrix(true, false);
   const surfaceNormalWorld = getHitSurfaceNormal(hitMesh, hitPoint, hitDir);
   const localPoint = hitMesh.worldToLocal(hitPoint.clone());
-  const localNormal = surfaceNormalWorld.clone();
   const worldQ = new THREE.Quaternion();
   hitMesh.getWorldQuaternion(worldQ);
-  localNormal.applyQuaternion(worldQ.invert()).normalize();
+  const invQ = worldQ.clone().invert();
+  const localNormal = surfaceNormalWorld.clone().applyQuaternion(invQ).normalize();
 
   const mark = new THREE.Mesh(damagePatchGeo, damagePatchMat);
   mark.position.copy(localPoint).addScaledVector(localNormal, -0.0035);
   mark.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), localNormal);
 
-  const base = CONFIG.damageMarkSize * (0.72 + Math.random() * 0.45);
+  const base = CONFIG.damageMarkSize * (0.85 + Math.random() * 0.5);
   const partScale = part === 'head' ? 0.88 : (PART_INFO[part]?.kind === 'limb' ? 0.72 : 1.0);
   mark.scale.set(
     base * partScale * (0.85 + Math.random() * 0.30),
@@ -4818,6 +5104,79 @@ function spawnDamageMark(hitMesh, hitPoint, hitDir, part, ownerNpc) {
   mark.userData.part = part;
   hitMesh.add(mark);
   damageMarks.push({ mesh: mark, owner: ownerNpc });
+
+  
+  
+  
+  
+  if (Math.random() < 0.7) {
+    while (damageMarks.length >= CONFIG.damageMarkCap) {
+      const old = damageMarks.shift();
+      if (old.mesh.parent) old.mesh.parent.remove(old.mesh);
+    }
+    const worldDown = new THREE.Vector3(0, -1, 0);
+    const localDown = worldDown.clone().applyQuaternion(invQ);
+    localDown.addScaledVector(localNormal, -localDown.dot(localNormal));
+    if (localDown.lengthSq() < 0.0001) localDown.set(0, -1, 0);
+    localDown.normalize();
+
+    const zAxis = localNormal.clone();
+    const xAxis = new THREE.Vector3().crossVectors(localDown, zAxis).normalize();
+    const yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis).normalize();
+    const basis = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
+
+    const dripLen = base * partScale * (1.6 + Math.random() * 2.2);
+    const drip = new THREE.Mesh(bloodDripGeo, bloodDripMat);
+    drip.position.copy(localPoint)
+      .addScaledVector(localNormal, -0.003)
+      .addScaledVector(localDown, dripLen * 0.42);
+    drip.quaternion.setFromRotationMatrix(basis);
+    drip.scale.set(base * partScale * 0.22, dripLen, base * 0.16);
+    drip.userData.owner = ownerNpc;
+    drip.userData.part = part;
+    hitMesh.add(drip);
+    damageMarks.push({ mesh: drip, owner: ownerNpc });
+  }
+}
+
+
+
+
+function spawnBulletHole(hitMesh, hitPoint, hitDir, part, ownerNpc) {
+  if (!CONFIG.bulletHolesEnabled || !hitMesh || !ownerNpc) return;
+  ensureBloodAssets();
+  while (bulletHoles.length >= CONFIG.bulletHoleCap) {
+    const old = bulletHoles.shift();
+    if (old.mesh.parent) old.mesh.parent.remove(old.mesh);
+  }
+
+  hitMesh.updateWorldMatrix(true, false);
+  const surfaceNormalWorld = getHitSurfaceNormal(hitMesh, hitPoint, hitDir);
+  const localPoint = hitMesh.worldToLocal(hitPoint.clone());
+  const worldQ = new THREE.Quaternion();
+  hitMesh.getWorldQuaternion(worldQ);
+  const localNormal = surfaceNormalWorld.clone().applyQuaternion(worldQ.invert()).normalize();
+
+  const group = new THREE.Group();
+  group.position.copy(localPoint).addScaledVector(localNormal, -0.004);
+  group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), localNormal);
+
+  const partScale = part === 'head' ? 0.85 : (PART_INFO[part]?.kind === 'limb' ? 0.7 : 1.0);
+  const size = 0.026 * partScale * (0.75 + Math.random() * 0.5);
+
+  const hole = new THREE.Mesh(bulletHoleGeo, bulletHoleMat);
+  hole.scale.set(size, size, 1);
+  group.add(hole);
+
+  const rim = new THREE.Mesh(bulletHoleRimGeo, bulletHoleRimMat);
+  rim.scale.set(size, size, 1);
+  rim.position.z = 0.0004;
+  group.add(rim);
+
+  group.userData.owner = ownerNpc;
+  group.userData.part = part;
+  hitMesh.add(group);
+  bulletHoles.push({ mesh: group, owner: ownerNpc });
 }
 
 function spawnHeadshotDebris(point, dir, ownerNpc) {
@@ -4850,8 +5209,8 @@ function spawnHeadshotDebris(point, dir, ownerNpc) {
 }
 
 function makeSoftBloodTexture() {
-  // Kept as a compatibility helper. Blood pools now use simple flat-color meshes,
-  // so there is no gradient, painted sheen, or fake reflection texture.
+  
+  
   return null;
 }
 
@@ -4860,7 +5219,7 @@ function disposeBloodPool(pool) {
   scene.remove(pool.group);
   pool.group.traverse(obj => {
     if (obj.geometry) obj.geometry.dispose();
-    // Materials are shared by the pieces in a single pool, so only dispose once.
+    
     if (obj.material && obj.material !== pool.material) obj.material.dispose();
   });
   if (pool.material) pool.material.dispose();
@@ -4879,8 +5238,8 @@ function spawnBloodPool(point, radius, ownerNpc = null, startAge = 0) {
   group.position.set(point.x, 0.009, point.z);
   group.rotation.y = Math.random() * Math.PI * 2;
 
-  // One medium pool forms the core. Smaller flat circles overlap it to create
-  // an organic silhouette without gradients or texture tricks.
+  
+  
   const material = makeBloodMaterial(CONFIG.bloodPoolOpacity);
   const pieces = [];
   const coreRadius = target * (0.72 + Math.random() * 0.12);
@@ -4904,8 +5263,8 @@ function spawnBloodPool(point, radius, ownerNpc = null, startAge = 0) {
     pieces.push(piece);
   }
 
-  // Add one or two tiny lobes close to the edge so the outline does not look
-  // like a perfect collection of evenly spaced circles.
+  
+  
   const lobes = 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < lobes; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -4945,12 +5304,12 @@ function spawnBloodPoolUnderNpc(npc, radius) {
   const source = pelvis || torso;
   const x = source.position.x;
   const z = source.position.z;
-  // The pool is always created on the ground plane directly beneath the dead body.
+  
   spawnBloodPool(new THREE.Vector3(x, 0.009, z), radius, npc, CONFIG.bloodPoolDelay);
 }
 
 function spawnFloorEnergyDecal(point, radius, ownerNpc = null) {
-  // Compatibility helper: blood pools are only created for dead NPCs and are positioned under their body.
+  
   if (!ownerNpc || ownerNpc.alive) return;
   spawnBloodPoolUnderNpc(ownerNpc, radius);
 }
@@ -5118,7 +5477,7 @@ function updateParticles(dt) {
     p.vel.y -= (p.gravity || 9.8) * dt;
     p.mesh.position.addScaledVector(p.vel, dt);
 
-    // Blood drops create a small floor mark exactly when they hit the ground.
+    
     if (p.blood && p.mesh.position.y <= 0.012 && p.vel.y < 0) {
       const impactSpeed = Math.hypot(p.vel.x, p.vel.z);
       p.mesh.position.y = 0.012;
@@ -5180,12 +5539,12 @@ function updateParticles(dt) {
       p.material.opacity = CONFIG.bloodPoolOpacity * (0.15 + 0.85 * eased);
     }
 
-    // Blood pools persist indefinitely. They are removed only when their owning
-    // NPC is respawned/cleared by the NPC reset logic.
+    
+    
     if (p.life !== Infinity) p.life -= dt;
   }
 
-  // Legacy decals are retained for compatibility with any other effect that uses them.
+  
   for (let i = bloodDecals.length - 1; i >= 0; i--) {
     const d = bloodDecals[i];
     if (d.scaleProgress < d.targetScale) {
@@ -5237,7 +5596,7 @@ function playGunshot() {
   const now = audioCtx.currentTime;
   const variation = (Math.random() - 0.5) * 10;
 
-  // A fast compressor lets the report hit hard without digital clipping.
+  
   const shotBus = audioCtx.createDynamicsCompressor();
   shotBus.threshold.setValueAtTime(-12, now);
   shotBus.knee.setValueAtTime(8, now);
@@ -5246,8 +5605,8 @@ function playGunshot() {
   shotBus.release.setValueAtTime(0.13, now);
   shotBus.connect(masterGain);
 
-  // Full-spectrum pressure snap: this midrange layer creates the audible
-  // "pow" that was missing when the sound was dominated by low frequencies.
+  
+  
   const blast = audioCtx.createBufferSource();
   blast.buffer = noiseBuffer;
   blast.playbackRate.value = 0.92 + Math.random() * 0.10;
@@ -5261,7 +5620,7 @@ function playGunshot() {
   blastGain.gain.exponentialRampToValueAtTime(0.001, now + 0.115);
   blast.connect(blastBand); blastBand.connect(blastGain); blastGain.connect(shotBus);
 
-  // Very short muzzle blast transient: this supplies the sharp initial report.
+  
   const crack = audioCtx.createBufferSource();
   crack.buffer = noiseBuffer;
   crack.playbackRate.value = 1.15 + Math.random() * 0.22;
@@ -5274,7 +5633,7 @@ function playGunshot() {
   crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
   crack.connect(crackHP); crackHP.connect(crackGain); crackGain.connect(shotBus);
 
-  // Heavy low-mid pressure wave; much more bass-forward than the previous tone.
+  
   const body = audioCtx.createBufferSource();
   body.buffer = noiseBuffer;
   body.playbackRate.value = 0.72 + Math.random() * 0.10;
@@ -5288,7 +5647,7 @@ function playGunshot() {
   bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
   body.connect(bodyLP); bodyLP.connect(bodyGain); bodyGain.connect(shotBus);
 
-  // Sub-bass punch, randomized slightly so repeated shots do not sound identical.
+  
   const sub = audioCtx.createOscillator();
   const subGain = audioCtx.createGain();
   sub.type = 'sine';
@@ -5299,7 +5658,7 @@ function playGunshot() {
   subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
   sub.connect(subGain); subGain.connect(shotBus);
 
-  // Mechanical click/slide component immediately behind the blast.
+  
   const mech = audioCtx.createBufferSource();
   mech.buffer = noiseBuffer;
   mech.playbackRate.value = 1.8 + Math.random() * 0.25;
@@ -5312,7 +5671,7 @@ function playGunshot() {
   mechGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
   mech.connect(mechHP); mechHP.connect(mechGain); mechGain.connect(shotBus);
 
-  // Small room/body tail so the shot does not sound like a dry digital click.
+  
   const tail = audioCtx.createBufferSource();
   tail.buffer = noiseBuffer;
   const tailLP = audioCtx.createBiquadFilter();
@@ -5324,8 +5683,8 @@ function playGunshot() {
   tailGain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
   tail.connect(tailLP); tailLP.connect(tailGain); tailGain.connect(shotBus);
 
-  // Two quiet early reflections give the outdoor report a short, realistic
-  // slap instead of leaving it as a dry synthetic thud.
+  
+  
   const reflectionDelay = audioCtx.createDelay(0.2);
   const reflectionGain = audioCtx.createGain();
   reflectionDelay.delayTime.setValueAtTime(0.052 + Math.random() * 0.016, now);
@@ -5415,8 +5774,8 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
     impactBus.connect(masterGain);
   }
 
-  // Dense filtered noise gives a short, irregular body/ground impact without
-  // the clean electronic pitch of an oscillator.
+  
+  
   const noise = audioCtx.createBufferSource();
   noise.buffer = noiseBuffer;
   noise.playbackRate.value = (heavy ? 0.58 : 0.72) + Math.random() * 0.14;
@@ -5802,6 +6161,40 @@ function initInput() {
       for (const npc of npcs) npc.fallSaveTimer = 0;
     }
   });
+
+  const bloodSticksCheck = document.getElementById('bloodSticksCheck');
+  bloodSticksCheck.addEventListener('change', () => { CONFIG.damageMarksEnabled = bloodSticksCheck.checked; });
+
+  const bulletHolesCheck = document.getElementById('bulletHolesCheck');
+  bulletHolesCheck.addEventListener('change', () => { CONFIG.bulletHolesEnabled = bulletHolesCheck.checked; });
+
+  const dismembermentCheck = document.getElementById('dismembermentCheck');
+  dismembermentCheck.addEventListener('change', () => { CONFIG.dismembermentEnabled = dismembermentCheck.checked; });
+
+  const wincingCheck = document.getElementById('wincingCheck');
+  wincingCheck.addEventListener('change', () => {
+    CONFIG.painWrithingEnabled = wincingCheck.checked;
+    CONFIG.painLegKickingEnabled = wincingCheck.checked;
+  });
+
+  const wincingChanceSlider = document.getElementById('wincingChanceSlider');
+  const wincingChanceVal = document.getElementById('wincingChanceVal');
+  wincingChanceSlider.addEventListener('input', () => { CONFIG.wincingChance = parseFloat(wincingChanceSlider.value); wincingChanceVal.textContent = Math.round(CONFIG.wincingChance * 100) + '%'; });
+
+  const stumbleChanceSlider = document.getElementById('stumbleChanceSlider');
+  const stumbleChanceVal = document.getElementById('stumbleChanceVal');
+  stumbleChanceSlider.addEventListener('input', () => { CONFIG.stumbleChance = parseFloat(stumbleChanceSlider.value); stumbleChanceVal.textContent = Math.round(CONFIG.stumbleChance * 100) + '%'; });
+
+  const dismemberThresholdSlider = document.getElementById('dismemberThresholdSlider');
+  const dismemberThresholdVal = document.getElementById('dismemberThresholdVal');
+  dismemberThresholdSlider.addEventListener('input', () => { CONFIG.dismemberHitThreshold = parseInt(dismemberThresholdSlider.value, 10); dismemberThresholdVal.textContent = CONFIG.dismemberHitThreshold; });
+
+  const buildingDummiesCheck = document.getElementById('buildingDummiesCheck');
+  buildingDummiesCheck.addEventListener('change', () => { CONFIG.buildingDummiesEnabled = buildingDummiesCheck.checked; });
+
+  const buildingDummyDensitySlider = document.getElementById('buildingDummyDensitySlider');
+  const buildingDummyDensityVal = document.getElementById('buildingDummyDensityVal');
+  buildingDummyDensitySlider.addEventListener('input', () => { CONFIG.buildingDummiesPerRoom = parseFloat(buildingDummyDensitySlider.value); buildingDummyDensityVal.textContent = CONFIG.buildingDummiesPerRoom.toFixed(2) + 'x'; });
 }
 
 function initSettingsTabs() {
@@ -5861,8 +6254,8 @@ function tryFire() {
   if (!CONFIG.unlimitedFireRate && player.fireTimer > 0) return;
   if (!CONFIG.infiniteAmmo && player.ammo <= 0) { tryReload(); return; }
 
-  // Without ADS, extend only the firing arm toward the reticle, then return it
-  // smoothly to the player's side while the support arm remains relaxed.
+  
+  
   if (!player.aiming) player.oneHandFireTimer = 0.28;
 
   if (!CONFIG.infiniteAmmo) player.ammo--;
