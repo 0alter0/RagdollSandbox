@@ -785,13 +785,6 @@ function addEnvironmentObstacle(x, z, w, d, h, opts = {}) {
   return mesh;
 }
 
-function buildConcreteBarrier(x, z, w = 3.2, d = 0.55, h = 1.15, rot = 0) {
-  const mesh = addEnvironmentObstacle(x, z, w, d, h, { color: 0x8a8a88, cover: true, rotation: rot });
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.15, w*0.12), 0.7, d+0.02), new THREE.MeshStandardMaterial({ color: 0xa3a3a0, roughness: 0.95 }));
-  stripe.position.set(x, 0.55, z); stripe.rotation.y = rot; stripe.castShadow = true; stripe.receiveShadow = true; scene.add(stripe);
-  return mesh;
-}
-
 const BUILDING_CELL = 7;
 const BUILDING_WALL_T = 0.4;
 const BUILDING_WALL_H = 3.1;
@@ -1906,7 +1899,7 @@ function buildPistol() {
   slide.castShadow = true;
   g.add(slide);
   g.userData.slide = slide;
-  
+
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.055), metalMat);
   grip.position.set(0, -0.02, 0.06);
   grip.rotation.x = 0.28;
