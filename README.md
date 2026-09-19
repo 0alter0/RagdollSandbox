@@ -8,4 +8,6 @@ Debloat the entire game by splitting up everything into individual files + addin
 
 Remove unused things in code
 
+Localization
+
 Add new features (they will be listed after we finish the next major changes)
