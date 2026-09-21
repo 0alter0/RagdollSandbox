@@ -21,7 +21,7 @@ let shellCasings = [];
 const MAX_BLOOD_PARTICLES = 2600;
 const MAX_BLOOD_DECALS = 180;
 const MAX_BLOOD_POOLS = 90;
-const MAX_BLOOD_LANDING_DOTS = 1800;
+const MAX_BLOOD_LANDING_DOTS = 900;
 const MAX_SHELL_CASINGS = 45;
 
 function makeBloodMaterial(opacity=0.72) {
