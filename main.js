@@ -1,567 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>RagdollSandboxV8.0.0B</title>
-<style>
-  html, body { margin:0; padding:0; overflow:hidden; background:#07080c; height:100%; }
-  canvas { display:block; }
-  * { box-sizing: border-box; font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; }
+﻿// DISCLAIMER!!!!!
+// This current build does NOT load the separate files right now, I've been working on this for almost 8 hours straight, I'm too lazy to do it.
+// So for now, all the code is in this one file. main.js will be removed and the index.html will just load each other file (or main.js will just call to the other files)
 
-  #crosshair {
-    position:fixed; top:50%; left:50%; width:20px; height:20px;
-    transform:translate(-50%,-50%); pointer-events:none; z-index:20;
-    transition: transform 0.1s ease, opacity 0.1s ease;
-  }
-  #crosshair::before, #crosshair::after {
-    content:''; position:absolute; background:rgba(255, 255, 255, 0.8);
-  }
-  #crosshair::before { left:50%; top:0; width:1px; height:100%; transform:translateX(-0.5px); }
-  #crosshair::after  { top:50%; left:0; height:1px; width:100%; transform:translateY(-0.5px); }
-  
-  #crosshair .dot {
-    position:absolute; top:50%; left:50%; width:2px; height:2px;
-    background:#fff; border-radius:50%; transform:translate(-50%,-50%);
-  }
 
-  #crosshair.aiming {
-    width:8px; height:8px; border:1px solid rgba(255,255,255,0.9);
-    border-radius:50%; background:transparent;
-  }
-  #crosshair.aiming::before, #crosshair.aiming::after, #crosshair.aiming .dot { display:none; }
-
-  #hitmarker {
-    position:fixed; top:50%; left:50%; width:24px; height:24px;
-    transform:translate(-50%,-50%) rotate(45deg); pointer-events:none; z-index:21;
-    opacity:0; transition: opacity 0.05s ease-out;
-  }
-  #hitmarker.show { opacity:1; }
-  #hitmarker::before, #hitmarker::after { content:''; position:absolute; background:#fff; }
-  #hitmarker::before { left:50%; top:0; width:2px; height:100%; transform:translateX(-1px); }
-  #hitmarker::after { top:50%; left:0; height:2px; width:100%; transform:translateY(-1px); }
-  #hitmarker.kill::before, #hitmarker.kill::after { background:#ef4444; }
-
-  #hud {
-    position:fixed; bottom:20px; right:24px; color:#fff; z-index:20;
-    font-family: monospace; font-size: 28px; font-weight: 700; user-select:none;
-    background: transparent; padding: 0; border: none; box-shadow: none;
-    letter-spacing: 1px;
-  }
-  #hud .reload-text { font-size:12px; color:#f59e0b; display:block; text-align:right; font-family: sans-serif; margin-top:2px; }
-
-  #tips {
-    position:fixed; top:20px; left:20px; z-index:20; color:#a1a1aa;
-    font-size:12px; line-height:1.5; user-select:none; display:none;
-  }
-
-  #fpsCounter {
-    position:fixed; top:20px; right:24px; z-index:20; color:#71717a;
-    font-size:11px; font-family:monospace; user-select:none; display:none;
-  }
-
-  #blocker {
-    position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
-    background: rgba(10, 10, 12, 0.92); color:#f1f1f1; cursor:pointer;
-  }
-  #blocker .panel {
-    text-align:center; max-width:440px; padding:36px;
-    background: #141416; border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  #blocker h1 {
-    font-size:24px; margin:0 0 8px; letter-spacing:2px;
-    color:#fff; font-weight: 700;
-  }
-  #blocker p { font-size:13px; color:#71717a; margin:6px 0; }
-  #blocker .prompt {
-    margin-top:20px; display:inline-block; padding:10px 24px; border-radius:4px;
-    background: #27272a; color:#fff; font-size:13px; font-weight:600;
-    border: 1px solid rgba(255,255,255,0.1); transition: background 0.15s;
-  }
-  #blocker:hover .prompt { background:#3f3f46; }
-
-  #settings {
-    position:fixed; inset:0; z-index:35; display:none; align-items:center; justify-content:center;
-    background:rgba(8, 8, 10, 0.9);
-  }
-  #settings .box {
-    width:min(760px, calc(100vw - 32px)); height:min(720px, calc(100vh - 42px)); overflow:hidden; background:#141416; border:1px solid rgba(255, 255, 255, 0.08);
-    border-radius:8px; padding:24px; color:#f1f1f1; display:flex; flex-direction:column;
-  }
-  #settings h2 { margin:0 0 16px; font-size:18px; color:#fff; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px; }
-  #settings label { display:block; font-size:12px; margin:12px 0 4px; color:#a1a1aa; font-weight:500; }
-  #settings .row { display:flex; align-items:center; gap:10px; }
-  #settings input[type=range] { flex:1; accent-color:#52525b; cursor:pointer; }
-  #settings .val { width:40px; text-align:right; font-size:12px; color:#71717a; font-family:monospace; }
-  #settings select {
-    width:100%; padding:8px; background:#1c1c1e; color:#f1f1f1; border:1px solid rgba(255,255,255,0.1);
-    border-radius:4px; font-size:12px; outline:none; cursor:pointer;
-  }
-  #settings .checkrow { display:flex; align-items:center; gap:8px; margin:10px 0; }
-  #settings .checkrow input[type=checkbox] { width:14px; height:14px; accent-color:#52525b; cursor:pointer; }
-  #settings .checkrow label { margin:0; cursor:pointer; color:#e4e4e7; }
-  #settings .section {
-    margin:18px 0 8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06);
-    color:#71717a; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
-  }
-  #settings .section:first-of-type { margin-top:0; border-top:none; padding-top:0; }
-  #settings .subsection { margin:12px 0 6px; color:#52525b; font-size:9px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; }
-  #settings .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
-  #settings .blood-grid { padding:2px 0 4px; }
-  #settings .blood-toggle { align-self:end; min-height:30px; margin:12px 0 4px; }
-  #settings .blood-toggle label { color:#d4d4d8; }
-
-  #settings .settings-tabs { display:flex; gap:6px; overflow-x:auto; padding:0 0 12px; margin-bottom:4px; scrollbar-width:thin; }
-  #settings .settings-tab { flex:0 0 auto; width:auto; padding:8px 13px; border-radius:5px; border:1px solid rgba(255,255,255,0.08); background:#1c1c1e; color:#a1a1aa; font-size:11px; }
-  #settings .settings-tab:hover { background:#27272a; color:#e4e4e7; }
-  #settings .settings-tab.active { background:#3f3f46; color:#fff; border-color:rgba(255,255,255,0.18); }
-  #settings .settings-tab-panel { display:none; flex:1; min-height:0; overflow-y:auto; padding:0 8px 10px 2px; }
-  #settings .settings-tab-panel.active { display:block; }
-  #settings .settings-tab-panel .section { margin-top:2px; border-top:none; padding-top:0; color:#d4d4d8; font-size:11px; }
-  @media (max-width:620px) { #settings .grid2 { grid-template-columns:1fr; } #settings .box { padding:18px; } }
-
-  #settings .btnrow { display:flex; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); }
-  #settings button {
-    flex:1; padding:10px 0; border-radius:4px; border:none; cursor:pointer;
-    font-size:13px; font-weight:600; transition: background 0.15s;
-  }
-  #settings .resume { background:#27272a; color:#fff; }
-  #settings .resume:hover { background:#3f3f46; }
-  #settings .respawn { background:#1c1c1e; color:#f1f1f1; border:1px solid rgba(255,255,255,0.1); }
-  #settings .respawn:hover { background:#27272a; }
-</style>
-</head>
-<body>
-
-<div id="crosshair"><div class="dot"></div></div>
-<div id="hitmarker"></div>
-<div id="fpsCounter">-- FPS</div>
-
-<div id="hud">
-  <span id="ammoCount">12</span>/<span id="ammoMaxHud">12</span>
-  <span class="reload-text" id="reloadLabel"></span>
-</div>
-
-<div id="tips">
-  <b>WASD</b> Move &nbsp;·&nbsp; <b>Shift</b> Sprint &nbsp;·&nbsp; <b>Space</b> Jump<br>
-  <b>Mouse</b> Look &nbsp;·&nbsp; <b>LMB</b> Shoot &nbsp;·&nbsp; <b>RMB</b> Aim &nbsp;·&nbsp; <b>R</b> Reload<br>
-  <b>V</b> First/Third Person &nbsp;·&nbsp; <b>P</b> Respawn Dummies + New Buildings &nbsp;·&nbsp; <b>Esc</b> Settings
-</div>
-
-<div id="blocker">
-  <div class="panel">
-    <h1>RAGDOLL SANDBOX</h1>
-    <p>Physics sandbox featuring weighted ragdolls and physical interaction[cite: 6].</p>
-    <div class="prompt">CLICK TO START</div>
-  </div>
-</div>
-
-<div id="settings">
-  <div class="box">
-    <h2>SETTINGS</h2>
-
-    <div class="section">Gameplay</div>
-    <div class="grid2">
-      <div class="checkrow"><input type="checkbox" id="autoReloadCheck" checked><label for="autoReloadCheck">Auto Reload</label></div>
-      <div class="checkrow"><input type="checkbox" id="infiniteAmmoCheck"><label for="infiniteAmmoCheck">Infinite Ammo</label></div>
-      <div class="checkrow"><input type="checkbox" id="unlimitedFireRateCheck"><label for="unlimitedFireRateCheck">Unlimited Fire Rate</label></div>
-      <div class="checkrow"><input type="checkbox" id="oneHitCheck"><label for="oneHitCheck">One Hit</label></div>
-      <div class="checkrow"><input type="checkbox" id="postDeathHitsCheck" checked><label for="postDeathHitsCheck">Shoot Dead Ragdolls</label></div>
-    </div>
-
-    <div class="section">NPC Behaviour</div>
-    <div class="grid2">
-      <div>
-        <label>NPC Count</label>
-        <div class="row">
-          <input type="range" id="npcCountSlider" min="2" max="20" step="1" value="10">
-          <div class="val" id="npcCountVal">10</div>
-        </div>
-      </div>
-      <div class="checkrow"><input type="checkbox" id="npcPanicCheck" checked><label for="npcPanicCheck">NPC Panic When Shot</label></div>
-      <div class="checkrow"><input type="checkbox" id="npcGroupPanicCheck" checked><label for="npcGroupPanicCheck">Group Panic</label></div>
-      <div class="checkrow"><input type="checkbox" id="ragdollVelocityCheck" checked><label for="ragdollVelocityCheck">Carry Movement Velocity Into Ragdoll</label></div>
-      <div class="checkrow"><input type="checkbox" id="fallSaveCheck"><label for="fallSaveCheck">Fall Saving (Arms Out) (Experimental)</label></div>
-    </div>
-
-    <div class="section">Structures</div>
-    <div class="grid2">
-      <div>
-        <label>Building Count</label>
-        <div class="row">
-          <input type="range" id="buildingCountSlider" min="0" max="6" step="1" value="3">
-          <div class="val" id="buildingCountVal">3</div>
-        </div>
-      </div>
-      <div>
-        <label>Building Size (Rooms)</label>
-        <div class="row">
-          <input type="range" id="buildingSizeSlider" min="3" max="12" step="1" value="7">
-          <div class="val" id="buildingSizeVal">7</div>
-        </div>
-      </div>
-      <div class="checkrow"><input type="checkbox" id="buildingDummiesCheck" checked><label for="buildingDummiesCheck">Spawn Dummies Inside Buildings</label></div>
-      <div>
-        <label>Dummies Per Room</label>
-        <div class="row">
-          <input type="range" id="buildingDummyDensitySlider" min="0.1" max="1" step="0.05" value="0.4">
-          <div class="val" id="buildingDummyDensityVal">0.40x</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">Interface & Display</div>
-    <div class="grid2">
-      <div class="checkrow"><input type="checkbox" id="hideAllUiCheck"><label for="hideAllUiCheck">Hide All UI</label></div>
-      <div class="checkrow"><input type="checkbox" id="crosshairCheck" checked><label for="crosshairCheck">Show Crosshair</label></div>
-      <div class="checkrow"><input type="checkbox" id="fpsCheck"><label for="fpsCheck">Show FPS Counter</label></div>
-      <div class="checkrow"><input type="checkbox" id="showTipsCheck"><label for="showTipsCheck">Show Control Tips</label></div>
-    </div>
-
-    <div class="section">Camera & Controls</div>
-    <div class="grid2">
-      <div>
-        <label>Field of View (FOV)</label>
-        <div class="row">
-          <input type="range" id="fovSlider" min="60" max="110" step="1" value="75">
-          <div class="val" id="fovVal">75°</div>
-        </div>
-      </div>
-      <div>
-        <label>Mouse Sensitivity</label>
-        <div class="row">
-          <input type="range" id="sensSlider" min="0.2" max="3" step="0.05" value="1">
-          <div class="val" id="sensVal">1.0</div>
-        </div>
-      </div>
-      <div>
-        <label>Camera Shake</label>
-        <div class="row">
-          <input type="range" id="shakeSlider" min="0" max="1" step="0.05" value="0.4">
-          <div class="val" id="shakeVal">0.40</div>
-        </div>
-      </div>
-      <div>
-        <label>Camera Smoothing</label>
-        <div class="row">
-          <input type="range" id="cameraSmoothSlider" min="0.2" max="1" step="0.05" value="0.72">
-          <div class="val" id="cameraSmoothVal">0.72</div>
-        </div>
-      </div>
-      <div class="checkrow"><input type="checkbox" id="headBobCheck" checked><label for="headBobCheck">Head Bob</label></div>
-      <div>
-        <label>Head Bob Strength</label>
-        <div class="row">
-          <input type="range" id="headBobSlider" min="0" max="1" step="0.05" value="0.35">
-          <div class="val" id="headBobVal">0.35</div>
-        </div>
-      </div>
-      <div class="checkrow"><input type="checkbox" id="recoilCheck" checked><label for="recoilCheck">Gun Recoil</label></div>
-      <div>
-        <label>Recoil Strength</label>
-        <div class="row">
-          <input type="range" id="recoilSlider" min="0" max="2" step="0.05" value="0.7">
-          <div class="val" id="recoilVal">0.70</div>
-        </div>
-      </div>
-      <div>
-        <label>Recoil Recovery</label>
-        <div class="row">
-          <input type="range" id="recoilRecoverySlider" min="2" max="18" step="0.5" value="9">
-          <div class="val" id="recoilRecoveryVal">9.0</div>
-        </div>
-      </div>
-      <div style="display:flex; align-items:flex-end; padding-bottom:6px;">
-        <div class="checkrow" style="margin:0;"><input type="checkbox" id="invertYCheck"><label for="invertYCheck">Invert Mouse Y</label></div>
-      </div>
-      <div class="checkrow"><input type="checkbox" id="firstPersonCheck"><label for="firstPersonCheck">First Person Mode (V)</label></div>
-    </div>
-
-    <div class="section">Graphics & Audio</div>
-    <div class="grid2">
-      <div style="grid-column: span 2;">
-        <label>Graphics Quality</label>
-        <select id="gfxQuality">
-          <option value="low">Low (High FPS)</option>
-          <option value="medium">Medium</option>
-          <option value="high" selected>High</option>
-          <option value="ultra">Ultra</option>
-        </select>
-      </div>
-      <div>
-        <label>Master Volume</label>
-        <div class="row">
-          <input type="range" id="volSlider" min="0" max="100" step="1" value="70">
-          <div class="val" id="volVal">70</div>
-        </div>
-      </div>
-      <div>
-        <label>Lighting Brightness</label>
-        <div class="row">
-          <input type="range" id="brightnessSlider" min="0.5" max="2.0" step="0.1" value="1.15">
-          <div class="val" id="brightnessVal">1.15x</div>
-        </div>
-      </div>
-      <div>
-        <label>Ambient Intensity</label>
-        <div class="row">
-          <input type="range" id="ambientSlider" min="0.1" max="1.5" step="0.05" value="0.75">
-          <div class="val" id="ambientVal">0.75</div>
-        </div>
-      </div>
-      <div>
-        <label>Time Scale (Game Speed)</label>
-        <div class="row">
-          <input type="range" id="timeScaleSlider" min="0.1" max="2.0" step="0.1" value="1.0">
-          <div class="val" id="timeScaleVal">1.0x</div>
-        </div>
-      </div>
-      <div class="checkrow" style="align-self:end;">
-        <input type="checkbox" id="ragdollCollisionSoundsCheck"><label for="ragdollCollisionSoundsCheck">Ragdoll Collision Sounds</label>
-      </div>
-      <div style="display:flex; flex-direction:column; justify-content:flex-end; grid-column: span 2;">
-         <div class="subsection">Blood & impact visuals</div>
-         <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="bloodCheck" checked><label for="bloodCheck">Blood Effects</label></div>
-         <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="bloodSplashCheck" checked><label for="bloodSplashCheck">Impact Blood Splash</label></div>
-         <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="fogCheck" checked><label for="fogCheck">Environmental Fog</label></div>
-         <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="groundGridCheck" checked><label for="groundGridCheck">Ground Grid Lines</label></div>
-      </div>
-    </div>
-
-    <div class="section">Blood & Impact</div>
-    <div class="subsection">Particles & splashes</div>
-    <div class="grid2 blood-grid">
-      <div>
-        <label>Blood Particle Amount</label>
-        <div class="row">
-          <input type="range" id="bloodParticleSlider" min="0.5" max="6" step="0.25" value="1.75">
-          <div class="val" id="bloodParticleVal">1.75x</div>
-        </div>
-      </div>
-      <div>
-        <label>Blood Particle Lifetime</label>
-        <div class="row">
-          <input type="range" id="bloodLifetimeSlider" min="0.15" max="1.5" step="0.05" value="0.6">
-          <div class="val" id="bloodLifetimeVal">0.60s</div>
-        </div>
-      </div>
-      <div class="checkrow blood-toggle"><input type="checkbox" id="bloodLandingDotsCheck" checked><label for="bloodLandingDotsCheck">Blood Landing Dots</label></div>
-      <div>
-        <label>Landing Dot Size</label>
-        <div class="row"><input type="range" id="bloodDotSizeSlider" min="0.35" max="2.5" step="0.05" value="1"><div class="val" id="bloodDotSizeVal">1.00x</div></div>
-      </div>
-      <div>
-        <label>Landing Dot Scatter</label>
-        <div class="row"><input type="range" id="bloodDotScatterSlider" min="0" max="2.5" step="0.05" value="0.65"><div class="val" id="bloodDotScatterVal">0.65x</div></div>
-      </div>
-      <div>
-        <label>Blood Dot Lifetime</label>
-        <div class="row"><input type="range" id="bloodDotLifetimeSlider" min="2" max="30" step="1" value="12"><div class="val" id="bloodDotLifetimeVal">12s</div></div>
-      </div>
-    </div>
-
-    <div class="subsection">Delayed blood pool</div>
-    <div class="grid2 blood-grid">
-      <div class="checkrow blood-toggle"><input type="checkbox" id="bloodPoolsCheck" checked><label for="bloodPoolsCheck">Delayed Blood Pools</label></div>
-      <div>
-        <label>Pool Delay</label>
-        <div class="row"><input type="range" id="bloodPoolDelaySlider" min="0.4" max="5" step="0.1" value="1.4"><div class="val" id="bloodPoolDelayVal">1.4s</div></div>
-      </div>
-      <div>
-        <label>Pool Spread Time</label>
-        <div class="row"><input type="range" id="bloodPoolSpreadSlider" min="0.5" max="8" step="0.1" value="3.2"><div class="val" id="bloodPoolSpreadVal">3.2s</div></div>
-      </div>
-      <div>
-        <label>Pool Size</label>
-        <div class="row"><input type="range" id="bloodPoolSizeSlider" min="0.35" max="3.5" step="0.05" value="1.2"><div class="val" id="bloodPoolSizeVal">1.20x</div></div>
-      </div>
-      <div>
-        <label>Pool Opacity</label>
-        <div class="row"><input type="range" id="bloodPoolOpacitySlider" min="0.15" max="1" step="0.05" value="0.72"><div class="val" id="bloodPoolOpacityVal">0.72</div></div>
-      </div>
-    </div>
-
-    <div class="section">Ragdoll Physics</div>
-    <div class="subsection">Core physics</div>
-    <div class="grid2">
-      <div>
-        <label>Impact Force</label>
-        <div class="row">
-          <input type="range" id="impactForceSlider" min="0.1" max="25" step="0.25" value="0.5">
-          <div class="val" id="impactForceVal">0.5x</div>
-        </div>
-      </div>
-      <div>
-        <label>Ragdoll Weight</label>
-        <div class="row">
-          <input type="range" id="ragdollWeightSlider" min="1" max="3.5" step="0.1" value="2">
-          <div class="val" id="ragdollWeightVal">2.0x</div>
-        </div>
-      </div>
-      <div>
-        <label>Gravity</label>
-        <div class="row">
-          <input type="range" id="gravitySlider" min="4" max="18" step="0.5" value="9.8">
-          <div class="val" id="gravityVal">9.8</div>
-        </div>
-      </div>
-      <div>
-        <label>Ragdoll Reset Time</label>
-        <div class="row">
-          <input type="range" id="resetTimerSlider" min="1" max="60" step="1" value="25">
-          <div class="val" id="resetTimerVal">25s</div>
-        </div>
-      </div>
-      <div class="checkrow" style="align-self:end;"><input type="checkbox" id="ragdollNeverDespawnCheck"><label for="ragdollNeverDespawnCheck">Never Despawn Ragdolls</label></div>
-      <div>
-        <label>Joint Looseness</label>
-        <div class="row">
-          <input type="range" id="jointSlider" min="0.25" max="1.5" step="0.05" value="1">
-          <div class="val" id="jointVal">1.00</div>
-        </div>
-      </div>
-      <div>
-        <label>Joint Strength</label>
-        <div class="row">
-          <input type="range" id="jointStrengthSlider" min="0.35" max="1.5" step="0.05" value="1">
-          <div class="val" id="jointStrengthVal">1.00x</div>
-        </div>
-      </div>
-      <div>
-        <label>Limb Damping</label>
-        <div class="row">
-          <input type="range" id="limbDampingSlider" min="0.02" max="0.35" step="0.01" value="0.08">
-          <div class="val" id="limbDampingVal">0.08</div>
-        </div>
-      </div>
-      <div>
-        <label>Hitbox Size</label>
-        <div class="row">
-          <input type="range" id="hitboxSlider" min="0.85" max="1.2" step="0.01" value="1">
-          <div class="val" id="hitboxVal">1.00x</div>
-        </div>
-      </div>
-      <div>
-        <label>Fall-Save Strength</label>
-        <div class="row">
-          <input type="range" id="fallSaveStrengthSlider" min="0" max="3" step="0.05" value="1.0">
-          <div class="val" id="fallSaveStrengthVal">1.00</div>
-        </div>
-      </div>
-    </div>
-    <div class="subsection">Joint behaviour</div>
-    <div class="checkrow" style="margin-top:12px;">
-      <input type="checkbox" id="showHitboxesCheck">
-      <label for="showHitboxesCheck">Show Hitboxes Debug</label>
-    </div>
-    <div class="checkrow">
-      <input type="checkbox" id="ragdollRotationLimitsCheck">
-      <label for="ragdollRotationLimitsCheck" title="Experimental: limits extreme joint rotation while trying to preserve floppy physics.">Joint Rotation Limits (Experimental)</label>
-    </div>
-    <div class="checkrow">
-      <input type="checkbox" id="looseSettlingCheck" checked>
-      <label for="looseSettlingCheck" title="Stops experimental joint limits from fighting a ragdoll after it has settled naturally on the floor.">Loose Settling</label>
-    </div>
-    <div class="checkrow">
-      <input type="checkbox" id="secondaryMotionCheck" checked>
-      <label for="secondaryMotionCheck">Secondary Body Motion</label>
-    </div>
-    <div>
-      <label>Physics Substeps</label>
-      <div class="row">
-        <input type="range" id="physicsSubstepsSlider" min="4" max="12" step="1" value="8">
-        <div class="val" id="physicsSubstepsVal">8</div>
-      </div>
-    </div>
-
-    <div class="subsection">Stability & settling</div>
-    <div class="checkrow">
-      <input type="checkbox" id="ragdollStabilityCheck" checked>
-      <label for="ragdollStabilityCheck">Ragdoll Stabilization</label>
-    </div>
-    <div>
-      <label>Stabilization Strength</label>
-      <div class="row">
-        <input type="range" id="stabilityStrengthSlider" min="0.25" max="1" step="0.05" value="0.65">
-        <div class="val" id="stabilityStrengthVal">0.65</div>
-      </div>
-    </div>
-    <div>
-      <label>Ragdoll Settle Time</label>
-      <div class="row">
-        <input type="range" id="settleTimeSlider" min="0.2" max="1.5" step="0.05" value="0.55">
-        <div class="val" id="settleTimeVal">0.55s</div>
-      </div>
-    </div>
-    <div>
-      <label>Ground Damping</label>
-      <div class="row">
-        <input type="range" id="groundDampingSlider" min="0" max="1" step="0.05" value="0.65">
-        <div class="val" id="groundDampingVal">0.65</div>
-      </div>
-    </div>
-    <div>
-      <label>Airborne Angular Damping</label>
-      <div class="row">
-        <input type="range" id="airAngularDampingSlider" min="0" max="0.4" step="0.01" value="0.10">
-        <div class="val" id="airAngularDampingVal">0.10</div>
-      </div>
-    </div>
-    <div class="subsection">Impact response</div>
-    <div>
-      <label>Impact Spin</label>
-      <div class="row">
-        <input type="range" id="impactSpinSlider" min="0" max="1" step="0.05" value="0.15">
-        <div class="val" id="impactSpinVal">0.15x</div>
-      </div>
-    </div>
-    <div>
-      <label>Ragdoll Ground Friction</label>
-      <div class="row">
-        <input type="range" id="ragdollFrictionSlider" min="0.35" max="1.2" step="0.05" value="0.8">
-        <div class="val" id="ragdollFrictionVal">0.80</div>
-      </div>
-    </div>
-
-    <div class="section">Gore & Trauma</div>
-    <div class="grid2">
-      <div class="checkrow"><input type="checkbox" id="bloodSticksCheck" checked><label for="bloodSticksCheck">Blood Sticks To Ragdolls</label></div>
-      <div class="checkrow"><input type="checkbox" id="bulletHolesCheck" checked><label for="bulletHolesCheck">Bullet Holes</label></div>
-      <div class="checkrow"><input type="checkbox" id="dismembermentCheck" checked><label for="dismembermentCheck">Limb Dismemberment</label></div>
-      <div class="checkrow"><input type="checkbox" id="wincingCheck" checked><label for="wincingCheck">Wincing (Kick/Flail On Death)</label></div>
-      <div>
-        <label>Wincing Chance</label>
-        <div class="row">
-          <input type="range" id="wincingChanceSlider" min="0" max="1" step="0.05" value="0.65">
-          <div class="val" id="wincingChanceVal">65%</div>
-        </div>
-      </div>
-      <div>
-        <label>Stumble Chance</label>
-        <div class="row">
-          <input type="range" id="stumbleChanceSlider" min="0" max="1" step="0.05" value="0.4">
-          <div class="val" id="stumbleChanceVal">40%</div>
-        </div>
-      </div>
-      <div>
-        <label>Dismember Hit Threshold</label>
-        <div class="row">
-          <input type="range" id="dismemberThresholdSlider" min="1" max="8" step="1" value="3">
-          <div class="val" id="dismemberThresholdVal">3</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="btnrow">
-      <button class="respawn" id="respawnBtn">Respawn Dummies + Buildings</button>
-      <button class="resume" id="resumeBtn">Resume</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-<script>
 (function(){
 "use strict";
 
@@ -569,7 +10,6 @@ const CONFIG = {
   walkSpeed: 3.8,
   sprintMult: 1.65,
   aimMult: 0.5,
-  jumpVel: 6.8,
   gravity: -19.62,
   mouseBaseSens: 0.0022,
   camDistanceNormal: 3.5,
@@ -577,8 +17,8 @@ const CONFIG = {
   camHeight: 1.55,
   camSideOffset: 0.95,    
   camSideOffsetAim: 0.80,  
-  fovNormal: 75,
-  fovAimRatio: 0.70,
+  fovNormal: 90,
+  fovAimRatio: 0.99,
   fireCooldown: 0.1,
   magSize: 12,
   reloadTime: 1.1,
@@ -590,8 +30,8 @@ const CONFIG = {
   headBobEnabled: true,
   headBobStrength: 0.35,
   recoilEnabled: true,
-  recoilStrength: 0.70,
-  recoilRecovery: 9.0,
+  recoilStrength: 2,
+  recoilRecovery: 2,
   bloodDecalLifetime: 7.0,
   autoReload: true,
   infiniteAmmo: false,
@@ -604,7 +44,7 @@ const CONFIG = {
   showHitboxes: false,
   ragdollAngularDamping: 0.20,
   ragdollLinearDamping: 0.16,
-  ragdollJointLimits: false,
+  ragdollJointLimits: true,
   ragdollLooseSettling: true,
   ragdollStability: true,
   stabilityStrength: 0.65,
@@ -612,14 +52,14 @@ const CONFIG = {
   groundDamping: 0.65,
   airborneAngularDamping: 0.10,
   secondaryMotion: true,
-  physicsSubsteps: 8,
+  physicsSubsteps: 12,
   painWrithingEnabled: true,
   painWrithingIntensity: 0.35,
   painRollAmount: 0.35,
   painWrithingDuration: 3.5,
   painLimpEnabled: true,
   limpRelaxSpeed: 0.95,
-  impactSpin: 0.15,
+  impactSpin: 1,
   ragdollFriction: 0.8,
   painLegKickingEnabled: true,
   painLegKickIntensity: 0.55,
@@ -629,11 +69,11 @@ const CONFIG = {
   stumbleDurationMin: 0.35,
   stumbleDurationMax: 0.85,
   stumbleStrength: 1.0,
-  bloodParticleMultiplier: 1.75,
-  bloodParticleLifetime: 0.60,
+  bloodParticleMultiplier: 6,
+  bloodParticleLifetime: 1.0,
   bloodSplashEnabled: true,
   bloodLandingDotsEnabled: true,
-  bloodDotSize: 1,
+  bloodDotSize: 2.5,
   bloodDotScatter: 0.65,
   bloodPoolsEnabled: true,
   bloodPoolDelay: 1.4,
@@ -658,7 +98,6 @@ const CONFIG = {
   showCrosshair: true,
   hideAllUi: false,
   timeScale: 1.0,
-  groundGrid: true,
   ragdollResetTime: 25,
   ragdollNeverDespawn: false,
   weapon: 'pistol',
@@ -688,11 +127,11 @@ const CONFIG = {
   npcPanicDuration: 5.5,
   npcPanicSpeedMin: 3.9,
   npcPanicSpeedMax: 4.8,
-  fallSaveEnabled: false,
-  fallSaveDuration: 1.5,
-  fallSaveFadeStart: 0.45,
+  fallSaveEnabled: true,
+  fallSaveDuration: 1.35,
+  fallSaveFadeStart: 0.30,
   fallSaveStrength: 1.0,
-  ragdollCollisionSounds: false
+  ragdollCollisionSounds: true
 };
 
 const SKIN_COLOR  = 0xd6a179;
@@ -1414,7 +853,7 @@ function buildEnvironment() {
   shadowCam.bottom = -22;
   shadowCam.near = 2;
   shadowCam.far = 120;
-  sunLight.shadow.bias = -0.00018;
+  sunLight.shadow.bias = -0.0000;
   sunLight.shadow.normalBias = 0.018;
   sunLight.shadow.radius = 0.8;
   scene.add(sunLight);
@@ -2030,10 +1469,6 @@ function buildPistol() {
   g.add(slide);
   g.userData.slide = slide;
 
-  const neonStrip = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.01, 0.18), glowMat);
-  neonStrip.position.set(0, 0.075, -0.02);
-  g.add(neonStrip);
-
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.055), metalMat);
   grip.position.set(0, -0.02, 0.06);
   grip.rotation.x = 0.28;
@@ -2060,6 +1495,8 @@ const player = {
   grounded: true,
   yaw: 0,
   pitch: -0.05,
+  firstPersonViewYaw: 0,
+  firstPersonViewPitch: -0.03,
   walkTime: 0,
   walkAnimationBlend: 0,
   aiming: false,
@@ -2269,17 +1706,21 @@ function buildPlayer() {
   player.gunGroup = h.gunGroup;
   player.rHand = h.pivots.rHand;
   player.lHand = h.pivots.lHand;
+  h.root.position.copy(player.position);
+  h.root.rotation.set(0, player.yaw, 0);
   scene.add(h.root);
   setFirstPersonMode(CONFIG.firstPerson);
 }
 
 function setFirstPersonMode(enabled) {
   CONFIG.firstPerson = !!enabled;
+  player.firstPersonViewYaw = player.yaw;
+  player.firstPersonViewPitch = player.pitch;
   if (camera) {
     camera.layers.enable(0);
     if (CONFIG.firstPerson) camera.layers.disable(1);
     else camera.layers.enable(1);
-    camera.near = CONFIG.firstPerson ? 0.06 : 0.06;
+    camera.near = CONFIG.firstPerson ? 0.01 : 0.01;
     camera.updateProjectionMatrix();
   }
   
@@ -2515,7 +1956,11 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
     const aimSway = Math.sin(performance.now() * 0.00105) * 0.0025;
     const lookPitch = player.pitch + (CONFIG.recoilEnabled ? player.recoilPitch : 0);
     const cameraDirLocal = new THREE.Vector3(0, -Math.sin(lookPitch), -Math.cos(lookPitch)).normalize();
-    const pitchFollow = THREE.MathUtils.clamp(cameraDirLocal.y, -0.78, 0.78);
+    const pitchFollow = THREE.MathUtils.clamp(cameraDirLocal.y, -0.78, 0);
+    const upwardPitch = Math.max(0, -lookPitch);
+    const downwardPitch = Math.max(0, lookPitch);
+    const adsReach = Math.max(0.62, Math.cos(downwardPitch));
+    const oneHandReach = Math.max(0.66, Math.cos(downwardPitch));
 
     
     
@@ -2523,15 +1968,35 @@ function applyPlayerWalkAnimation(m, dt, moving, speed, grounded) {
     const adsWristLocal = new THREE.Vector3(
       0.020 + aimSway,
       0.290 + pitchFollow * 0.330 + breath,
-      -0.530 * Math.max(0.62, Math.cos(lookPitch))
+      -0.530 * adsReach
     );
     
     
     const oneHandWristLocal = new THREE.Vector3(
       0.040 + aimSway * 0.35,
       0.255 + pitchFollow * 0.290 + breath * 0.5,
-      -0.545 * Math.max(0.66, Math.cos(lookPitch))
+      -0.545 * oneHandReach
     );
+
+    if (upwardPitch > 0.0001) {
+      const aimRotation = upwardPitch;
+      const axis = new THREE.Vector3(1, 0, 0);
+      const rightShoulderLocal = new THREE.Vector3(BONE.shoulderX, BONE.shoulderY, 0);
+
+      const adsFromShoulder = new THREE.Vector3(
+        0.020 + aimSway,
+        0.290 + breath,
+        -0.530
+      ).sub(rightShoulderLocal).applyAxisAngle(axis, aimRotation);
+      adsWristLocal.copy(rightShoulderLocal).add(adsFromShoulder);
+
+      const oneHandFromShoulder = new THREE.Vector3(
+        0.040 + aimSway * 0.35,
+        0.255 + breath * 0.5,
+        -0.545
+      ).sub(rightShoulderLocal).applyAxisAngle(axis, aimRotation);
+      oneHandWristLocal.copy(rightShoulderLocal).add(oneHandFromShoulder);
+    }
     if (CONFIG.firstPerson) {
       
       
@@ -2670,13 +2135,9 @@ function updatePlayer(dt, input) {
   player.position.x = nextPos.x;
   player.position.z = nextPos.z;
 
-  if (input.keys['Space'] && player.grounded) {
-    player.velocityY = CONFIG.jumpVel;
-    player.grounded = false;
-  }
-  player.velocityY += CONFIG.gravity * dt;
-  player.position.y += player.velocityY * dt;
-  if (player.position.y <= 0) { player.position.y = 0; player.velocityY = 0; player.grounded = true; }
+  player.velocityY = 0;
+  player.position.y = 0;
+  player.grounded = true;
 
   m.root.position.copy(player.position);
   m.root.rotation.y = player.yaw;
@@ -2817,8 +2278,28 @@ function updateCamera(dt) {
   player.recoilPitch = THREE.MathUtils.damp(player.recoilPitch || 0, 0, recovery, dt);
   player.recoilYaw = THREE.MathUtils.damp(player.recoilYaw || 0, 0, recovery * 1.15, dt);
 
-  const pitch = player.pitch + (CONFIG.recoilEnabled ? player.recoilPitch : 0);
-  const yaw = player.yaw + (CONFIG.recoilEnabled ? player.recoilYaw : 0);
+  if (CONFIG.firstPerson) {
+    const yawDelta = Math.atan2(
+      Math.sin(player.yaw - player.firstPersonViewYaw),
+      Math.cos(player.yaw - player.firstPersonViewYaw)
+    );
+    const yawFollow = 1 - Math.exp(-22 * dt);
+    player.firstPersonViewYaw += yawDelta * yawFollow;
+    player.firstPersonViewPitch = THREE.MathUtils.damp(
+      player.firstPersonViewPitch,
+      player.pitch,
+      18,
+      dt
+    );
+  } else {
+    player.firstPersonViewYaw = player.yaw;
+    player.firstPersonViewPitch = player.pitch;
+  }
+
+  const viewPitch = CONFIG.firstPerson ? player.firstPersonViewPitch : player.pitch;
+  const viewYaw = CONFIG.firstPerson ? player.firstPersonViewYaw : player.yaw;
+  const pitch = viewPitch + (CONFIG.recoilEnabled ? player.recoilPitch : 0);
+  const yaw = viewYaw + (CONFIG.recoilEnabled ? player.recoilYaw : 0);
 
   const behind = new THREE.Vector3(
     Math.sin(yaw) * Math.cos(pitch),
@@ -2841,10 +2322,13 @@ function updateCamera(dt) {
   const bobY = moving ? Math.abs(Math.sin(bobPhase)) * 0.020 * bobStrength : 0;
   const bobX = moving ? Math.sin(bobPhase * 0.5) * 0.012 * bobStrength : 0;
 
+  const upwardLook = CONFIG.firstPerson ? THREE.MathUtils.clamp(-viewPitch / 1.15, 0, 1) : 0;
+  const firstPersonForwardOffset = 0.22 - upwardLook * 0.15;
+
   const desired = CONFIG.firstPerson
     ? player.position.clone()
         .add(new THREE.Vector3(0, viewHeight + bobY * 0.55, 0))
-        .add(bodyForward.multiplyScalar(0.22))
+        .add(bodyForward.multiplyScalar(firstPersonForwardOffset))
         .add(bodyRight.multiplyScalar(bobX * 0.15))
     : player.position.clone()
         .add(new THREE.Vector3(bobX, CONFIG.camHeight + bobY, 0))
@@ -2948,7 +2432,13 @@ function ragdollFloorClearance(name, qx, qy, qz, qw) {
   const yx = 2 * (qx * qy + qw * qz);
   const yy = 1 - 2 * (qx * qx + qz * qz);
   const yz = 2 * (qy * qz - qw * qx);
-  return Math.abs(yx) * def.hx + Math.abs(yy) * def.hy + Math.abs(yz) * def.hz;
+  const mainClearance = Math.abs(yx) * def.hx + Math.abs(yy) * def.hy + Math.abs(yz) * def.hz;
+  if (name !== 'lShin' && name !== 'rShin') return mainClearance;
+
+  const footOffset = new THREE.Vector3(0, -BONE.shinLen / 2 - BONE.foot.ry, -0.03);
+  const footCenterY = yx * footOffset.x + yy * footOffset.y + yz * footOffset.z;
+  const footExtentY = Math.abs(yx) * BONE.foot.rx + Math.abs(yy) * BONE.foot.ry + Math.abs(yz) * BONE.foot.rz;
+  return Math.max(mainClearance, -footCenterY + footExtentY);
 }
 
 function makeHitboxMesh(name, npc) {
@@ -2973,7 +2463,12 @@ function makeHitboxMesh(name, npc) {
       rShin: [BONE.shinR * 1.08, BONE.shinLen / 2 * 1.05, BONE.shinR * 1.08]
     };
     const s = sizes[name] || [0.1, 0.1, 0.1];
-    geo = new THREE.BoxGeometry(s[0] * 2, s[1] * 2, s[2] * 2);
+    if (name === 'torso' || name === 'lowerTorso' || name === 'upperTorso') {
+      geo = new THREE.SphereGeometry(1, 18, 12);
+      geo.scale(s[0], s[1], s[2]);
+    } else {
+      geo = new THREE.BoxGeometry(s[0] * 2, s[1] * 2, s[2] * 2);
+    }
   }
   const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, wireframe: false });
   const hb = new THREE.Mesh(geo, mat);
@@ -3021,8 +2516,16 @@ function updateHitboxes() {
       } else if (npc.bodies && (partName === 'lowerTorso' || partName === 'upperTorso')) {
         const body = npc.bodies['torso'];
         if (body) {
-          hb.position.set(body.position.x, body.position.y, body.position.z);
-          hb.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+          const bodyPos = new THREE.Vector3(body.position.x, body.position.y, body.position.z);
+          const bodyQuat = new THREE.Quaternion(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+          const offset = npc.torsoHitboxOffsets && npc.torsoHitboxOffsets[partName];
+          if (offset) {
+            hb.position.copy(offset.position.clone().applyQuaternion(bodyQuat).add(bodyPos));
+            hb.quaternion.copy(bodyQuat.clone().multiply(offset.quaternion));
+          } else {
+            hb.position.copy(bodyPos);
+            hb.quaternion.copy(bodyQuat);
+          }
         }
       } else {
         hb.visible = false;
@@ -3165,6 +2668,7 @@ function spawnNPC(x, z, yaw, buildingSpawned) {
     fallSaveTimer: 0,
     fallSaveDelay: 0,
     fallSaveJoints: null,
+    protectivePoseAge: 0,
     willWince: false,
     stumbling: false,
     stumbleTimer: 0,
@@ -3203,6 +2707,7 @@ function spawnNPC(x, z, yaw, buildingSpawned) {
     panicStrength: 0,
     runBlend: 0,
     headshotDeath: false,
+    headshotRelaxTimer: 0,
     painTime: Math.random() * Math.PI * 2,
     painTimer: 0,
     painContacted: false,
@@ -3321,6 +2826,7 @@ function respawnNpc(npc) {
   npc.fallSaveTimer = 0;
   npc.fallSaveDelay = 0;
   npc.fallSaveJoints = null;
+  npc.protectivePoseAge = 0;
   npc.willWince = false;
   npc.stumbling = false;
   npc.stumbleTimer = 0;
@@ -3348,6 +2854,7 @@ function respawnNpc(npc) {
   npc.panicBias = 0;
   npc.runBlend = 0;
   npc.headshotDeath = false;
+  npc.headshotRelaxTimer = 0;
   npc.painTime = Math.random() * Math.PI * 2;
   npc.painTimer = 0;
   npc.painContacted = false;
@@ -3490,7 +2997,7 @@ function handleNpcHit(mesh, hitPoint, hitDir) {
     npc.lastHitPart = part;
     applyRagdollHit(npc, part, hitPoint, hitDir);
     showHitmarker(false);
-    spawnImpactParticles(hitPoint, hitDir, npc);
+    if ((npc.deathElapsed || 0) < 3) spawnImpactParticles(hitPoint, hitDir, npc);
     registerBleedWound(npc, mesh, hitPoint, part, 0.65);
     spawnDamageMark(mesh, hitPoint, hitDir, part, npc);
     spawnBulletHole(mesh, hitPoint, hitDir, part, npc);
@@ -3609,6 +3116,7 @@ function registerRepeatedHit(npc, part) {
 }
 
 function severRagdollJointForPart(npc, part) {
+  return;
   if (!npc || !npc.constraints || !npc.ragdollJoints) return;
   const parentByPart = {
     head: 'torso:head',
@@ -3682,7 +3190,7 @@ function applyRagdollHit(npc, part, hitPoint, hitDir) {
   body.angularVelocity.y += (Math.random() - 0.5) * 0.45 * CONFIG.impactForceMultiplier;
   body.angularVelocity.z += (Math.random() - 0.5) * 0.45 * CONFIG.impactForceMultiplier;
 
-  if (CONFIG.fallSaveEnabled) {
+  if (!npc.groundLimp && CONFIG.fallSaveEnabled) {
     npc.fallSaveTimer = Math.max(npc.fallSaveTimer || 0, CONFIG.fallSaveDuration * 0.6);
   }
 }
@@ -3691,8 +3199,14 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
   if (!npc || !npc.alive || npc.bodies) return;
   npc.alive = false;
   npc.hp = 0;
+  npc.deathElapsed = 0;
   npc.deathTimer = CONFIG.ragdollNeverDespawn ? Infinity : CONFIG.ragdollResetTime;
   npc.headshotDeath = !!isHeadshot;
+  npc.headshotRelaxTimer = isHeadshot ? 0.45 : 0;
+  npc.groundLimp = false;
+  npc.supportTime = 0;
+  npc.landingStarted = false;
+  npc.activeRelease = 1;
   npc.painLimp = false;
   npc.painLimpBlend = 0;
   npc.painTime = Math.random() * Math.PI * 2;
@@ -3706,7 +3220,7 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
   
   
   
-  npc.willWince = Math.random() < CONFIG.wincingChance;
+  npc.willWince = !isHeadshot && Math.random() < CONFIG.wincingChance;
   npc.stumbling = !isHeadshot && Math.random() < CONFIG.stumbleChance;
   npc.stumbleTimer = npc.stumbling
     ? CONFIG.stumbleDurationMin + Math.random() * (CONFIG.stumbleDurationMax - CONFIG.stumbleDurationMin)
@@ -3732,8 +3246,9 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
   
   
   
-  npc.fallSaveTimer = CONFIG.fallSaveEnabled ? CONFIG.fallSaveDuration : 0;
-  npc.fallSaveDelay = CONFIG.fallSaveEnabled ? 0.08 : 0;
+  npc.protectivePoseAge = 0;
+  npc.fallSaveTimer = !isHeadshot && CONFIG.fallSaveEnabled ? CONFIG.fallSaveDuration : 0;
+  npc.fallSaveDelay = 0;
   npc.fallSaveJoints = {
     lShoulder: npc.ragdollJoints.find(j => j.a === 'torso' && j.b === 'lUpperArm'),
     lElbow: npc.ragdollJoints.find(j => j.a === 'lUpperArm' && j.b === 'lForearm'),
@@ -3745,8 +3260,22 @@ function killNpc(npc, hitPart, hitPoint, hitDir, isHeadshot) {
   const bodies = npc.bodies;
 
   if (isHeadshot) {
-    addImpulse(bodies.head, dir, 2.8);
-    addImpulse(bodies.torso, dir, 1.0);
+    addImpulse(bodies.head, dir, 1.15);
+    addImpulse(bodies.torso, dir, 1.05);
+    addImpulse(bodies.pelvis, dir, 0.35);
+    const sharedX = (bodies.head.velocity.x + bodies.torso.velocity.x) * 0.5;
+    const sharedY = (bodies.head.velocity.y + bodies.torso.velocity.y) * 0.5;
+    const sharedZ = (bodies.head.velocity.z + bodies.torso.velocity.z) * 0.5;
+    bodies.head.velocity.x = THREE.MathUtils.lerp(bodies.head.velocity.x, sharedX, 0.72);
+    bodies.head.velocity.y = THREE.MathUtils.lerp(bodies.head.velocity.y, sharedY, 0.72);
+    bodies.head.velocity.z = THREE.MathUtils.lerp(bodies.head.velocity.z, sharedZ, 0.72);
+    bodies.torso.velocity.x = THREE.MathUtils.lerp(bodies.torso.velocity.x, sharedX, 0.42);
+    bodies.torso.velocity.y = THREE.MathUtils.lerp(bodies.torso.velocity.y, sharedY, 0.42);
+    bodies.torso.velocity.z = THREE.MathUtils.lerp(bodies.torso.velocity.z, sharedZ, 0.42);
+    for (const body of Object.values(bodies)) {
+      body.linearDamping = 0.08;
+      body.angularDamping = 0.08;
+    }
     npc.bloodPoolPending = { radius: 1.0, timer: CONFIG.bloodPoolDelay };
   } else {
     addImpulse(bodies.torso, dir, 2.5);
@@ -3794,73 +3323,73 @@ function addImpulse(body, dir, mag) {
 
 const FALLSAVE_DOWN_AXIS = new THREE.Vector3(0, -1, 0);
 function poseArmChain(npc, side, targetUpperDir, targetForeDir, strength, dt) {
-  const joints = npc.fallSaveJoints;
-  if (!joints) return;
-  const shoulderJoint = side === 'l' ? joints.lShoulder : joints.rShoulder;
-  const elbowJoint = side === 'l' ? joints.lElbow : joints.rElbow;
-  if (!shoulderJoint || !elbowJoint) return;
-
+  if (npc.groundLimp || !npc.fallSaveJoints || dt <= 0) return;
+  const shoulder = npc.fallSaveJoints[side + 'Shoulder'];
+  const elbow = npc.fallSaveJoints[side + 'Elbow'];
+  if (!shoulder || !elbow || shoulder.broken || elbow.broken) return;
   const torso = npc.bodies.torso;
-  const upperBody = npc.bodies[side === 'l' ? 'lUpperArm' : 'rUpperArm'];
-  const foreBody = npc.bodies[side === 'l' ? 'lForearm' : 'rForearm'];
-  if (!torso || !upperBody || !foreBody) return;
-
-  const slerpAmt = Math.min(0.22, dt * Math.min(strength, 8));
-  const holdDamp = Math.max(0, 1 - slerpAmt);
-
-  
-  
-  const torsoQuat = new THREE.Quaternion(torso.quaternion.x, torso.quaternion.y, torso.quaternion.z, torso.quaternion.w);
-  const shoulderAnchor = new THREE.Vector3(shoulderJoint.pivotA.x, shoulderJoint.pivotA.y, shoulderJoint.pivotA.z)
-    .applyQuaternion(torsoQuat)
-    .add(new THREE.Vector3(torso.position.x, torso.position.y, torso.position.z));
-
-  
-  
-  const upperQ = new THREE.Quaternion(upperBody.quaternion.x, upperBody.quaternion.y, upperBody.quaternion.z, upperBody.quaternion.w);
-  const upperDown = FALLSAVE_DOWN_AXIS.clone().applyQuaternion(upperQ);
-  const upperDelta = new THREE.Quaternion().setFromUnitVectors(upperDown, targetUpperDir);
-  upperQ.slerp(upperDelta.multiply(upperQ), slerpAmt);
-
-  const upperPivotWorld = new THREE.Vector3(shoulderJoint.pivotB.x, shoulderJoint.pivotB.y, shoulderJoint.pivotB.z).applyQuaternion(upperQ);
-  const newUpperPos = shoulderAnchor.clone().sub(upperPivotWorld);
-
-  upperBody.quaternion.set(upperQ.x, upperQ.y, upperQ.z, upperQ.w);
-  upperBody.position.set(newUpperPos.x, newUpperPos.y, newUpperPos.z);
-  upperBody.velocity.set(torso.velocity.x, torso.velocity.y, torso.velocity.z);
-  upperBody.angularVelocity.x *= holdDamp;
-  upperBody.angularVelocity.y *= holdDamp;
-  upperBody.angularVelocity.z *= holdDamp;
-  if (typeof upperBody.wakeUp === 'function') upperBody.wakeUp();
-
-  
-  
-  const elbowAnchor = new THREE.Vector3(elbowJoint.pivotA.x, elbowJoint.pivotA.y, elbowJoint.pivotA.z)
-    .applyQuaternion(upperQ)
-    .add(newUpperPos);
-
-  const foreQ = new THREE.Quaternion(foreBody.quaternion.x, foreBody.quaternion.y, foreBody.quaternion.z, foreBody.quaternion.w);
-  const foreDown = FALLSAVE_DOWN_AXIS.clone().applyQuaternion(foreQ);
-  const foreDelta = new THREE.Quaternion().setFromUnitVectors(foreDown, targetForeDir);
-  foreQ.slerp(foreDelta.multiply(foreQ), slerpAmt);
-
-  const forePivotWorld = new THREE.Vector3(elbowJoint.pivotB.x, elbowJoint.pivotB.y, elbowJoint.pivotB.z).applyQuaternion(foreQ);
-  const newForePos = elbowAnchor.clone().sub(forePivotWorld);
-
-  foreBody.quaternion.set(foreQ.x, foreQ.y, foreQ.z, foreQ.w);
-  foreBody.position.set(newForePos.x, newForePos.y, newForePos.z);
-  foreBody.velocity.set(torso.velocity.x, torso.velocity.y, torso.velocity.z);
-  foreBody.angularVelocity.x *= holdDamp;
-  foreBody.angularVelocity.y *= holdDamp;
-  foreBody.angularVelocity.z *= holdDamp;
-  if (typeof foreBody.wakeUp === 'function') foreBody.wakeUp();
+  const upper = npc.bodies[side + 'UpperArm'];
+  const fore = npc.bodies[side + 'Forearm'];
+  if (!upper || !fore) return;
+  const blend = Math.min(1, strength / 8) * (npc.activeRelease ?? 1);
+  if (blend < 0.005) return;
+  const drive = (body, parent, target) => {
+    const q = new THREE.Quaternion(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+    const current = FALLSAVE_DOWN_AXIS.clone().applyQuaternion(q);
+    const error = new THREE.Quaternion().setFromUnitVectors(current, target);
+    if (error.w < 0) error.set(-error.x, -error.y, -error.z, -error.w);
+    const axis = new THREE.Vector3(error.x, error.y, error.z);
+    const sin = axis.length();
+    if (sin < 0.0001) return;
+    axis.multiplyScalar(2 * Math.atan2(sin, error.w) / sin);
+    const torque = axis.multiplyScalar(9.0 * blend);
+    torque.x -= (body.angularVelocity.x - parent.angularVelocity.x) * 0.85 * blend;
+    torque.y -= (body.angularVelocity.y - parent.angularVelocity.y) * 0.85 * blend;
+    torque.z -= (body.angularVelocity.z - parent.angularVelocity.z) * 0.85 * blend;
+    torque.clampLength(0, 5.0 * blend);
+    body.torque.x += torque.x; body.torque.y += torque.y; body.torque.z += torque.z;
+    const parentReaction = 0.18;
+    parent.torque.x -= torque.x * parentReaction;
+    parent.torque.y -= torque.y * parentReaction;
+    parent.torque.z -= torque.z * parentReaction;
+    body.wakeUp();
+  };
+  const q = new THREE.Quaternion(torso.quaternion.x, torso.quaternion.y, torso.quaternion.z, torso.quaternion.w);
+  const staging = new THREE.Vector3(side === 'l' ? -0.55 : 0.55, -0.25, 0.75).normalize().applyQuaternion(q);
+  const fold = THREE.MathUtils.smoothstep(npc.protectivePoseAge || 0, 0.04, 0.24);
+  drive(upper, torso, staging.clone().lerp(targetUpperDir, fold).normalize());
+  drive(fore, upper, staging.clone().lerp(targetForeDir, fold * fold).normalize());
 }
 
-
-
-
-
-
+function updateLandingState(npc, dt) {
+  if (npc.groundLimp) return;
+  let supported = false;
+  for (const contact of world.contacts) {
+    for (const body of [npc.bodies.torso, npc.bodies.pelvis]) {
+      const other = contact.bi === body ? contact.bj : contact.bj === body ? contact.bi : null;
+      if (!other || other.userData?.npc === npc || !other.collisionResponse) continue;
+      const supportY = contact.bi === body ? -contact.ni.y : contact.ni.y;
+      if (supportY > 0.55 && other.position.y <= body.position.y) supported = true;
+    }
+  }
+  npc.supportTime = supported ? (npc.supportTime || 0) + dt : Math.max(0, (npc.supportTime || 0) - dt);
+  if (npc.supportTime > 0.035) npc.landingStarted = true;
+  if (!npc.landingStarted) return;
+  npc.activeRelease = Math.max(0, (npc.activeRelease ?? 1) - dt / 0.14);
+  npc.stumbling = false;
+  npc.willWince = false;
+  if (npc.activeRelease > 0) return;
+  npc.groundLimp = true;
+  npc.fallSaveTimer = 0;
+  npc.painLimp = true;
+  for (const body of Object.values(npc.bodies)) {
+    body.torque.set(0, 0, 0);
+    body.angularDamping = 0.08;
+    body.linearDamping = 0.08;
+    body.sleepTimeLimit = 1.25;
+    body.wakeUp();
+  }
+}
 
 function applyFallSave(npc, dt) {
   if (!npc.bodies) return;
@@ -3869,8 +3398,17 @@ function applyFallSave(npc, dt) {
   const torso = npc.bodies.torso;
   if (!torso) return;
 
-  const fade = Math.min(1, npc.fallSaveTimer / CONFIG.fallSaveFadeStart);
+  npc.protectivePoseAge = (npc.protectivePoseAge || 0) + dt;
+  const reachIn = THREE.MathUtils.smoothstep(npc.protectivePoseAge, 0, 0.055);
+  const release = THREE.MathUtils.smoothstep(npc.fallSaveTimer, 0, CONFIG.fallSaveFadeStart);
+  const fade = reachIn * release;
   npc.fallSaveTimer -= dt;
+
+  const lowest = Math.min(
+    torso.position.y - ragdollFloorClearance('torso', torso.quaternion.x, torso.quaternion.y, torso.quaternion.z, torso.quaternion.w),
+    npc.bodies.pelvis ? npc.bodies.pelvis.position.y - ragdollFloorClearance('pelvis', npc.bodies.pelvis.quaternion.x, npc.bodies.pelvis.quaternion.y, npc.bodies.pelvis.quaternion.z, npc.bodies.pelvis.quaternion.w) : Infinity
+  );
+  if (lowest < 0.10 && torso.velocity.y > -0.8) npc.fallSaveTimer = Math.min(npc.fallSaveTimer, CONFIG.fallSaveFadeStart);
 
   const vx = torso.velocity.x, vz = torso.velocity.z;
   const speed = Math.hypot(vx, vz);
@@ -3883,15 +3421,31 @@ function applyFallSave(npc, dt) {
   const sideX = -dirZ, sideZ = dirX;
 
   const strength = THREE.MathUtils.clamp(CONFIG.fallSaveStrength, 0, 3) * fade;
+  if (strength <= 0.01) return;
 
-  const lUpperTarget = new THREE.Vector3(dirX * 0.75 - sideX * 0.30, -0.55, dirZ * 0.75 - sideZ * 0.30).normalize();
-  const lForeTarget  = new THREE.Vector3(dirX * 0.55 - sideX * 0.18, -0.80, dirZ * 0.55 - sideZ * 0.18).normalize();
-  const rUpperTarget = new THREE.Vector3(dirX * 0.75 + sideX * 0.30, -0.55, dirZ * 0.75 + sideZ * 0.30).normalize();
-  const rForeTarget  = new THREE.Vector3(dirX * 0.55 + sideX * 0.18, -0.80, dirZ * 0.55 + sideZ * 0.18).normalize();
+  const groundApproach = THREE.MathUtils.clamp(1 - lowest / 0.75, 0, 1);
+  const downwardReach = THREE.MathUtils.lerp(0.46, 0.84, groundApproach);
+  const forwardReach = THREE.MathUtils.lerp(0.92, 0.56, groundApproach);
+  const foreDown = THREE.MathUtils.lerp(0.52, 0.94, groundApproach);
+  const lUpperTarget = new THREE.Vector3(dirX * forwardReach - sideX * 0.38, -downwardReach, dirZ * forwardReach - sideZ * 0.38).normalize();
+  const lForeTarget  = new THREE.Vector3(dirX * 0.58 - sideX * 0.12, -foreDown, dirZ * 0.58 - sideZ * 0.12).normalize();
+  const rUpperTarget = new THREE.Vector3(dirX * forwardReach + sideX * 0.38, -downwardReach, dirZ * forwardReach + sideZ * 0.38).normalize();
+  const rForeTarget  = new THREE.Vector3(dirX * 0.58 + sideX * 0.12, -foreDown, dirZ * 0.58 + sideZ * 0.12).normalize();
 
-  poseArmChain(npc, 'l', lUpperTarget, lForeTarget, strength, dt);
-  poseArmChain(npc, 'r', rUpperTarget, rForeTarget, strength, dt);
+  poseArmChain(npc, 'l', lUpperTarget, lForeTarget, strength * 9.5, dt);
+  poseArmChain(npc, 'r', rUpperTarget, rForeTarget, strength * 9.5, dt);
+
+  const pelvis = npc.bodies.pelvis;
+  if (pelvis) {
+    const counter = Math.min(1, strength) * dt;
+    torso.angularVelocity.x *= Math.max(0, 1 - counter * 1.8);
+    torso.angularVelocity.z *= Math.max(0, 1 - counter * 1.8);
+    pelvis.angularVelocity.x *= Math.max(0, 1 - counter * 1.2);
+    pelvis.angularVelocity.z *= Math.max(0, 1 - counter * 1.2);
+  }
 }
+
+
 
 
 
@@ -3960,6 +3514,10 @@ const RAGDOLL_JOINT_LIMITS = {
   'lThigh:lShin':       { maxSwing: 16 * DEG, twistAxis: new CANNON.Vec3(1, 0, 0), twistMin: -7 * DEG, twistMax: 145 * DEG },
   'rThigh:rShin':       { maxSwing: 16 * DEG, twistAxis: new CANNON.Vec3(1, 0, 0), twistMin: -7 * DEG, twistMax: 145 * DEG }
 };
+const FALL_SAVE_ARM_JOINTS = new Set([
+  'torso:lUpperArm', 'torso:rUpperArm',
+  'lUpperArm:lForearm', 'rUpperArm:rForearm'
+]);
 
 function limitRagdollJoint(bodyA, bodyB, joint, limit) {
   if (!bodyA || !bodyB || !joint || !joint.restRelative || !limit) return;
@@ -4030,12 +3588,16 @@ function limitRagdollJoint(bodyA, bodyB, joint, limit) {
 }
 
 function enforceRagdollJointLimits(npc) {
-  if (!CONFIG.ragdollJointLimits || !npc.bodies || !npc.ragdollJoints) return;
-  
-  
+  if (npc.groundLimp || npc.landingStarted || !CONFIG.ragdollJointLimits || !npc.bodies || !npc.ragdollJoints) return;
+  const fallSaveActive = (npc.fallSaveTimer || 0) > 0;
+
   for (let pass = 0; pass < 1; pass++) {
     for (const joint of npc.ragdollJoints) {
-      const limit = RAGDOLL_JOINT_LIMITS[`${joint.a}:${joint.b}`];
+      if (joint.broken) continue;
+      const jointKey = `${joint.a}:${joint.b}`;
+      if ((npc.headshotRelaxTimer || 0) > 0 && jointKey === 'torso:head') continue;
+      if (fallSaveActive && FALL_SAVE_ARM_JOINTS.has(jointKey)) continue;
+      const limit = RAGDOLL_JOINT_LIMITS[jointKey];
       if (!limit) continue;
       limitRagdollJoint(npc.bodies[joint.a], npc.bodies[joint.b], joint, limit);
     }
@@ -4090,6 +3652,11 @@ function buildRagdoll(npc) {
       material: ragdollMaterial
     });
 
+    if (name === 'lShin' || name === 'rShin') {
+      const footShape = new CANNON.Box(new CANNON.Vec3(BONE.foot.rx, BONE.foot.ry, BONE.foot.rz));
+      body.addShape(footShape, new CANNON.Vec3(0, -BONE.shinLen / 2 - BONE.foot.ry, -0.03));
+    }
+
     body.position.set(p.position.x, p.position.y, p.position.z);
     body.quaternion.set(p.quaternion.x, p.quaternion.y, p.quaternion.z, p.quaternion.w);
 
@@ -4103,12 +3670,8 @@ function buildRagdoll(npc) {
     body.sleepTimeLimit = CONFIG.ragdollStability ? 0.55 : 0.7;
 
     body.collisionFilterGroup = GROUP_RAGDOLL;
-    
-    
-    
-    
-    
-    body.collisionFilterMask = GROUP_GROUND;
+
+    body.collisionFilterMask = GROUP_GROUND | GROUP_RAGDOLL;
 
     body.userData = { npc, ragdollPart: name };
     body.addEventListener('collide', (event) => {
@@ -4177,6 +3740,30 @@ function buildRagdoll(npc) {
   const jointWorld = new THREE.Vector3();
   npc.ragdollJoints = [];
 
+  npc.torsoHitboxOffsets = {};
+  if (bodies.torso) {
+    const torsoBodyPos = new THREE.Vector3(bodies.torso.position.x, bodies.torso.position.y, bodies.torso.position.z);
+    const torsoBodyQuat = new THREE.Quaternion(
+      bodies.torso.quaternion.x,
+      bodies.torso.quaternion.y,
+      bodies.torso.quaternion.z,
+      bodies.torso.quaternion.w
+    );
+    const inverseTorsoQuat = torsoBodyQuat.clone().invert();
+    for (const partName of ['lowerTorso', 'upperTorso']) {
+      const torsoPart = npc.model.parts[partName];
+      if (!torsoPart) continue;
+      const partPosition = new THREE.Vector3();
+      const partQuaternion = new THREE.Quaternion();
+      torsoPart.getWorldPosition(partPosition);
+      torsoPart.getWorldQuaternion(partQuaternion);
+      npc.torsoHitboxOffsets[partName] = {
+        position: partPosition.sub(torsoBodyPos).applyQuaternion(inverseTorsoQuat),
+        quaternion: inverseTorsoQuat.clone().multiply(partQuaternion)
+      };
+    }
+  }
+
   for (const j of JOINT_MAP) {
     const bodyA = bodies[j.a], bodyB = bodies[j.b];
     if (!bodyA || !bodyB || !j.pivot) continue;
@@ -4214,6 +3801,7 @@ function destroyRagdoll(npc) {
   npc.fallSaveTimer = 0;
   npc.fallSaveDelay = 0;
   npc.fallSaveJoints = null;
+  npc.protectivePoseAge = 0;
   for (const extra of (npc.ragdollExtras || [])) {
     if (!extra.mesh) continue;
     if (extra.originalParent) {
@@ -4226,12 +3814,13 @@ function destroyRagdoll(npc) {
   }
   npc.ragdollExtras = [];
 
-  for (const c of (npc.constraints || [])) world.removeConstraint(c);
+  for (const c of (npc.constraints || [])) if (c) world.removeConstraint(c);
   for (const name in npc.bodies) world.removeBody(npc.bodies[name]);
 
   npc.bodies = null;
   npc.constraints = null;
   npc.ragdollJoints = [];
+  npc.torsoHitboxOffsets = null;
 
   for (const name of Object.keys(RAGDOLL_SHAPES)) {
     const mesh = npc.model.parts[name];
@@ -4363,21 +3952,15 @@ function applyRagdollStability(npc, dt) {
     }
   }
 
-  if (CONFIG.ragdollStability) {
-    for (const name in npc.bodies) {
-      const body = npc.bodies[name];
-      if (!body) continue;
-      const nearGround = body.position.y < ragdollFloorClearance(name, body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w) + 0.09;
-      if (nearGround && Math.hypot(body.velocity.x, body.velocity.y, body.velocity.z) < 0.045 && Math.hypot(body.angularVelocity.x, body.angularVelocity.y, body.angularVelocity.z) < 0.06 && typeof body.sleep === 'function') {
-        body.sleep();
-      }
-      if (typeof body.wakeUp === 'function' && npc.painContacted && !npc.painLimp) body.wakeUp();
+  if (npc.groundLimp && avgLinear > 0.06) {
+    for (const body of Object.values(npc.bodies)) {
+      if (body.sleepState === CANNON.Body.SLEEPING) body.wakeUp();
     }
   }
 }
 
 function applySecondaryBodyMotion(npc, dt) {
-  if (!CONFIG.secondaryMotion || !npc.bodies) return;
+  if (npc.landingStarted || !CONFIG.secondaryMotion || !npc.bodies) return;
   const torso = npc.bodies.torso;
   const pelvis = npc.bodies.pelvis;
   if (!torso || !pelvis) return;
@@ -4394,7 +3977,7 @@ function applySecondaryBodyMotion(npc, dt) {
 }
 
 function applyPainWrithing(npc, dt) {
-  if (!CONFIG.painWrithingEnabled || npc.headshotDeath || !npc.bodies) return;
+  if (npc.landingStarted || npc.fallSaveTimer > 0 || !CONFIG.painWrithingEnabled || npc.headshotDeath || !npc.bodies) return;
   const torso = npc.bodies.torso;
   const pelvis = npc.bodies.pelvis;
   if (!torso || !pelvis) return;
@@ -4617,6 +4200,8 @@ function updateNpcs(dt) {
       applyNpcWalkAnimation(npc, dt, moving, npc.currentSpeed);
       applyNpcHitReaction(npc, dt);
     } else if (npc.bodies) {
+      npc.headshotRelaxTimer = Math.max(0, (npc.headshotRelaxTimer || 0) - dt);
+      npc.deathElapsed = (npc.deathElapsed || 0) + dt;
       if (!CONFIG.ragdollNeverDespawn && npc.deathTimer > 0) {
         npc.deathTimer -= dt;
         if (npc.deathTimer <= 0) autoRespawnNeeded = true;
@@ -4628,7 +4213,8 @@ function updateNpcs(dt) {
           npc.bloodPoolPending = null;
         }
       }
-      if (CONFIG.fallSaveEnabled) applyFallSave(npc, dt);
+      updateLandingState(npc, dt);
+      if (!npc.groundLimp && CONFIG.fallSaveEnabled) applyFallSave(npc, dt);
       if (npc.stumbling) applyStumble(npc, dt);
       applyRagdollStability(npc, dt);
       applySecondaryBodyMotion(npc, dt);
@@ -4637,7 +4223,7 @@ function updateNpcs(dt) {
       for (const name in npc.bodies) {
         const body = npc.bodies[name];
         const mesh = npc.model.parts[name];
-        if (!mesh || isNaN(body.position.x) || isNaN(body.quaternion.x)) continue;
+        if (!mesh) continue;
 
         if (!Number.isFinite(body.position.x) || !Number.isFinite(body.position.y) || !Number.isFinite(body.position.z) ||
             !Number.isFinite(body.quaternion.x) || !Number.isFinite(body.quaternion.y) || !Number.isFinite(body.quaternion.z) || !Number.isFinite(body.quaternion.w)) {
@@ -5051,7 +4637,7 @@ function spawnBloodLandingDot(position, scale=1, ownerNpc=null) {
   const base = (0.008 + Math.random() * 0.016) * CONFIG.bloodDotSize * scale;
   mesh.scale.set(base * (0.7 + Math.random()*0.8), base * (0.7 + Math.random()*1.2), 1);
   scene.add(mesh);
-  bloodLandingDots.push({ mesh, owner: ownerNpc, life: Infinity, maxLife: Infinity });
+  bloodLandingDots.push({ mesh, owner: ownerNpc, life: CONFIG.bloodDotLifetime, maxLife: CONFIG.bloodDotLifetime });
 }
 
 function getHitSurfaceNormal(hitMesh, hitPoint, hitDir) {
@@ -5180,6 +4766,7 @@ function spawnBulletHole(hitMesh, hitPoint, hitDir, part, ownerNpc) {
 }
 
 function spawnHeadshotDebris(point, dir, ownerNpc) {
+  return;
   if (!CONFIG.headshotDebrisEnabled) return;
   ensureBloodAssets();
   const count = Math.max(0, Math.min(CONFIG.headshotDebrisPerHit, 12));
@@ -5314,6 +4901,7 @@ function spawnFloorEnergyDecal(point, radius, ownerNpc = null) {
   spawnBloodPoolUnderNpc(ownerNpc, radius);
 }
 
+let simpleHitGeometry = null;
 function spawnImpactParticles(point, dir, ownerNpc=null) {
   if (!bloodEffectsEnabled) return;
   ensureBloodAssets();
@@ -5494,6 +5082,7 @@ function updateParticles(dt) {
     }
     if (p.life <= 0) {
       scene.remove(p.mesh);
+      if (p.simpleHit) p.mesh.material.dispose();
       bloodParticles.splice(i, 1);
     }
   }
@@ -5517,10 +5106,9 @@ function updateParticles(dt) {
 
   for (let i = bloodLandingDots.length - 1; i >= 0; i--) {
     const d = bloodLandingDots[i];
-    if (d.owner && !npcs.includes(d.owner)) {
+    d.life -= dt;
+    if (d.life <= 0 || (d.owner && !npcs.includes(d.owner))) {
       scene.remove(d.mesh);
-      d.mesh.geometry.dispose();
-      d.mesh.material.dispose();
       bloodLandingDots.splice(i, 1);
     }
   }
@@ -5747,9 +5335,9 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
   let pan = 0;
   if (worldPosition && camera) {
     distance = camera.position.distanceTo(worldPosition);
-    if (distance >= 34) return;
-    distanceGain = 1 / (1 + Math.pow(Math.max(0, distance - 2) / 6.5, 2));
-    if (distanceGain < 0.025) return;
+    if (distance >= 52) return;
+    distanceGain = 1 / (1 + Math.pow(Math.max(0, distance - 3) / 9.5, 2));
+    if (distanceGain < 0.018) return;
     const toSound = worldPosition.clone().sub(camera.position);
     if (toSound.lengthSq() > 0.0001) {
       toSound.normalize();
@@ -5763,7 +5351,7 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
 
   const strength = THREE.MathUtils.clamp((impact - 0.45) / 5.5, 0.08, 1.0);
   const impactBus = audioCtx.createGain();
-  impactBus.gain.setValueAtTime(distanceGain, now);
+  impactBus.gain.setValueAtTime(distanceGain * 2.85, now);
   let output = impactBus;
   if (typeof audioCtx.createStereoPanner === 'function') {
     const panner = audioCtx.createStereoPanner();
@@ -5785,7 +5373,7 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
   filter.Q.value = heavy ? 0.72 : 0.88;
   const gain = audioCtx.createGain();
   gain.gain.setValueAtTime(0.0, now);
-  gain.gain.linearRampToValueAtTime((heavy ? 0.16 : 0.11) * strength, now + 0.003);
+  gain.gain.linearRampToValueAtTime((heavy ? 0.27 : 0.19) * strength, now + 0.003);
   gain.gain.exponentialRampToValueAtTime(0.001, now + (heavy ? 0.20 : 0.13));
   noise.connect(filter); filter.connect(gain); gain.connect(output);
 
@@ -5798,7 +5386,7 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
   clothFilter.Q.value = 0.55;
   const clothGain = audioCtx.createGain();
   clothGain.gain.setValueAtTime(0.0, now);
-  clothGain.gain.linearRampToValueAtTime(0.026 * strength, now + 0.002);
+  clothGain.gain.linearRampToValueAtTime(0.048 * strength, now + 0.002);
   clothGain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
   cloth.connect(clothFilter); clothFilter.connect(clothGain); clothGain.connect(output);
 
@@ -5810,7 +5398,7 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
   lowFilter.frequency.value = heavy ? 175 : 220;
   const lowGain = audioCtx.createGain();
   lowGain.gain.setValueAtTime(0.0, now);
-  lowGain.gain.linearRampToValueAtTime((heavy ? 0.075 : 0.045) * strength, now + 0.004);
+  lowGain.gain.linearRampToValueAtTime((heavy ? 0.14 : 0.085) * strength, now + 0.004);
   lowGain.gain.exponentialRampToValueAtTime(0.001, now + (heavy ? 0.18 : 0.11));
   lowBody.connect(lowFilter); lowFilter.connect(lowGain); lowGain.connect(output);
 
@@ -5822,10 +5410,48 @@ function playRagdollCollisionSound(impact, heavy = false, worldPosition = null) 
 const input = { keys: {}, mouseDX: 0, mouseDY: 0, mouseDown: false };
 let pointerLocked = false;
 let menuOpen = false;
+let pointerLockRequestPending = false;
+let suppressUnlockMenuUntil = 0;
+
+function resetPointerInputState() {
+  input.mouseDown = false;
+  input.mouseDX = 0;
+  input.mouseDY = 0;
+  player.aiming = false;
+}
+
+function requestGamePointerLock() {
+  if (menuOpen || pointerLocked || pointerLockRequestPending) return;
+  const canvas = renderer.domElement;
+  pointerLockRequestPending = true;
+  suppressUnlockMenuUntil = performance.now() + 650;
+  resetPointerInputState();
+  ensureAudio();
+
+  try {
+    const request = canvas.requestPointerLock();
+    if (request && typeof request.catch === 'function') {
+      request.catch(() => {
+        pointerLockRequestPending = false;
+      });
+    }
+  } catch (error) {
+    pointerLockRequestPending = false;
+  }
+
+  window.setTimeout(() => {
+    if (!pointerLocked) {
+      pointerLockRequestPending = false;
+    }
+  }, 700);
+}
 
 function initInput() {
   window.addEventListener('keydown', e => {
     input.keys[e.code] = true;
+    if (!pointerLocked && !menuOpen && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'Space'].includes(e.code)) {
+      requestGamePointerLock();
+    }
     if (e.repeat) return;
     if (e.code === 'KeyP') respawnAllNPCs();
     if (e.code === 'KeyR') tryReload();
@@ -5855,23 +5481,33 @@ function initInput() {
   document.addEventListener('contextmenu', e => e.preventDefault());
 
   const canvas = renderer.domElement;
-  document.getElementById('blocker').addEventListener('click', () => {
-    ensureAudio();
-    canvas.requestPointerLock();
+  canvas.addEventListener('click', () => {
+    if (!menuOpen && !pointerLocked) requestGamePointerLock();
   });
 
   document.addEventListener('pointerlockchange', () => {
     pointerLocked = document.pointerLockElement === canvas;
-    if (!pointerLocked) {
-      input.mouseDown = false;
-      player.aiming = false;
-      input.mouseDX = 0; input.mouseDY = 0;
+    if (pointerLocked) {
+      pointerLockRequestPending = false;
+      menuOpen = false;
+      document.getElementById('settings').style.display = 'none';
+    } else {
+      resetPointerInputState();
     }
-    document.getElementById('blocker').style.display = pointerLocked ? 'none' : (menuOpen ? 'none' : 'flex');
-    if (!pointerLocked && !menuOpen) openSettings();
+    if (!pointerLocked && !menuOpen && !pointerLockRequestPending && performance.now() >= suppressUnlockMenuUntil) openSettings();
   });
 
-  document.getElementById('resumeBtn').addEventListener('click', () => { closeSettings(); renderer.domElement.requestPointerLock(); });
+  document.addEventListener('pointerlockerror', () => {
+    pointerLockRequestPending = false;
+    resetPointerInputState();
+  });
+
+  window.addEventListener('blur', resetPointerInputState);
+
+  document.getElementById('resumeBtn').addEventListener('click', () => {
+    closeSettings();
+    requestGamePointerLock();
+  });
   document.getElementById('respawnBtn').addEventListener('click', respawnAllNPCs);
   const fovSlider = document.getElementById('fovSlider');
   const fovVal = document.getElementById('fovVal');
@@ -6008,12 +5644,6 @@ function initInput() {
   const fogCheck = document.getElementById('fogCheck');
   fogCheck.addEventListener('change', () => {
     scene.fog.density = fogCheck.checked ? 0.022 : 0;
-  });
-
-  const groundGridCheck = document.getElementById('groundGridCheck');
-  groundGridCheck.addEventListener('change', () => {
-    CONFIG.groundGrid = groundGridCheck.checked;
-    groundMesh.visible = CONFIG.groundGrid;
   });
 
   const jointStrengthSlider = document.getElementById('jointStrengthSlider');
@@ -6157,8 +5787,9 @@ function initInput() {
   const fallSaveCheck = document.getElementById('fallSaveCheck');
   fallSaveCheck.addEventListener('change', () => {
     CONFIG.fallSaveEnabled = fallSaveCheck.checked;
-    if (!CONFIG.fallSaveEnabled) {
-      for (const npc of npcs) npc.fallSaveTimer = 0;
+    for (const npc of npcs) {
+      npc.protectivePoseAge = 0;
+      if (!CONFIG.fallSaveEnabled) npc.fallSaveTimer = 0;
     }
   });
 
@@ -6240,7 +5871,6 @@ function updateUiVisibility() {
 function openSettings() {
   menuOpen = true;
   document.getElementById('settings').style.display = 'flex';
-  document.getElementById('blocker').style.display = 'none';
 }
 function closeSettings() {
   menuOpen = false;
@@ -6362,13 +5992,16 @@ function init() {
     chooseNpcWanderTarget(npc, false);
   }
 
+  player.model.root.position.copy(player.position);
+  player.model.root.rotation.set(0, player.yaw, 0);
+  player.cameraLookTarget = null;
+  updateCamera(0);
+  updateShadowFocus();
   updateAmmoHud();
+  renderer.render(scene, camera);
   animate();
 }
 
 init();
 
 })();
-</script>
-</body>
-</html>

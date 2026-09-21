@@ -1,0 +1,428 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RagdollSandbox V8.0.0Bunf</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="crosshair"><div class="dot"></div></div>
+  <div id="hitmarker"></div>
+  <div id="fpsCounter">-- FPS</div>
+  <div id="hud">
+    <span id="ammoCount">12</span>/<span id="ammoMaxHud">12</span>
+    <span class="reload-text" id="reloadLabel"></span>
+  </div>
+  <div id="tips">
+    <b>WASD</b> Move &nbsp;·&nbsp; <b>Shift</b> Sprint<br>
+    <b>Mouse</b> Look &nbsp;·&nbsp; <b>LMB</b> Shoot &nbsp;·&nbsp; <b>RMB</b> Aim &nbsp;·&nbsp; <b>R</b> Reload<br>
+    <b>V</b> First/Third Person &nbsp;·&nbsp; <b>P</b> Respawn Dummies + New Buildings &nbsp;·&nbsp; <b>Esc</b> Settings
+  </div>
+  <div id="settings">
+    <div class="box">
+      <h2>SETTINGS</h2>
+
+      <div class="section">Gameplay</div>
+      <div class="grid2">
+        <div class="checkrow"><input type="checkbox" id="autoReloadCheck" checked><label for="autoReloadCheck">Auto Reload</label></div>
+        <div class="checkrow"><input type="checkbox" id="infiniteAmmoCheck"><label for="infiniteAmmoCheck">Infinite Ammo</label></div>
+        <div class="checkrow"><input type="checkbox" id="unlimitedFireRateCheck"><label for="unlimitedFireRateCheck">Unlimited Fire Rate</label></div>
+        <div class="checkrow"><input type="checkbox" id="oneHitCheck"><label for="oneHitCheck">One Hit</label></div>
+        <div class="checkrow"><input type="checkbox" id="postDeathHitsCheck" checked><label for="postDeathHitsCheck">Shoot Dead Ragdolls</label></div>
+      </div>
+
+      <div class="section">NPC Behaviour</div>
+      <div class="grid2">
+        <div>
+          <label>NPC Count</label>
+          <div class="row">
+            <input type="range" id="npcCountSlider" min="2" max="20" step="1" value="10">
+            <div class="val" id="npcCountVal">10</div>
+          </div>
+        </div>
+        <div class="checkrow"><input type="checkbox" id="npcPanicCheck" checked><label for="npcPanicCheck">NPC Panic When Shot</label></div>
+        <div class="checkrow"><input type="checkbox" id="npcGroupPanicCheck" checked><label for="npcGroupPanicCheck">Group Panic</label></div>
+        <div class="checkrow"><input type="checkbox" id="ragdollVelocityCheck" checked><label for="ragdollVelocityCheck">Carry Movement Velocity Into Ragdoll</label></div>
+        <div class="checkrow"><input type="checkbox" id="fallSaveCheck" checked><label for="fallSaveCheck">Fall Saving (Arms Out) (Experimental)</label></div>
+      </div>
+
+      <div class="section">Structures</div>
+      <div class="grid2">
+        <div>
+          <label>Building Count</label>
+          <div class="row">
+            <input type="range" id="buildingCountSlider" min="0" max="6" step="1" value="3">
+            <div class="val" id="buildingCountVal">3</div>
+          </div>
+        </div>
+        <div>
+          <label>Building Size (Rooms)</label>
+          <div class="row">
+            <input type="range" id="buildingSizeSlider" min="3" max="12" step="1" value="7">
+            <div class="val" id="buildingSizeVal">7</div>
+          </div>
+        </div>
+        <div class="checkrow"><input type="checkbox" id="buildingDummiesCheck" checked><label for="buildingDummiesCheck">Spawn Dummies Inside Buildings</label></div>
+        <div>
+          <label>Dummies Per Room</label>
+          <div class="row">
+            <input type="range" id="buildingDummyDensitySlider" min="0.1" max="1" step="0.05" value="0.4">
+            <div class="val" id="buildingDummyDensityVal">0.40x</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">Interface & Display</div>
+      <div class="grid2">
+        <div class="checkrow"><input type="checkbox" id="hideAllUiCheck"><label for="hideAllUiCheck">Hide All UI</label></div>
+        <div class="checkrow"><input type="checkbox" id="crosshairCheck" checked><label for="crosshairCheck">Show Crosshair</label></div>
+        <div class="checkrow"><input type="checkbox" id="fpsCheck"><label for="fpsCheck">Show FPS Counter</label></div>
+        <div class="checkrow"><input type="checkbox" id="showTipsCheck"><label for="showTipsCheck">Show Control Tips</label></div>
+      </div>
+
+      <div class="section">Camera & Controls</div>
+      <div class="grid2">
+        <div>
+          <label>Field of View (FOV)</label>
+          <div class="row">
+            <input type="range" id="fovSlider" min="60" max="110" step="1" value="90">
+            <div class="val" id="fovVal">90°</div>
+          </div>
+        </div>
+        <div>
+          <label>Mouse Sensitivity</label>
+          <div class="row">
+            <input type="range" id="sensSlider" min="0.2" max="3" step="0.05" value="1">
+            <div class="val" id="sensVal">1.0</div>
+          </div>
+        </div>
+        <div>
+          <label>Camera Shake</label>
+          <div class="row">
+            <input type="range" id="shakeSlider" min="0" max="1" step="0.05" value="0.4">
+            <div class="val" id="shakeVal">0.40</div>
+          </div>
+        </div>
+        <div>
+          <label>Camera Smoothing</label>
+          <div class="row">
+            <input type="range" id="cameraSmoothSlider" min="0.2" max="1" step="0.05" value="0.72">
+            <div class="val" id="cameraSmoothVal">0.72</div>
+          </div>
+        </div>
+        <div class="checkrow"><input type="checkbox" id="headBobCheck" checked><label for="headBobCheck">Head Bob</label></div>
+        <div>
+          <label>Head Bob Strength</label>
+          <div class="row">
+            <input type="range" id="headBobSlider" min="0" max="1" step="0.05" value="0.35">
+            <div class="val" id="headBobVal">0.35</div>
+          </div>
+        </div>
+        <div class="checkrow"><input type="checkbox" id="recoilCheck" checked><label for="recoilCheck">Gun Recoil</label></div>
+        <div>
+          <label>Recoil Strength</label>
+          <div class="row">
+            <input type="range" id="recoilSlider" min="0" max="2" step="0.05" value="2">
+            <div class="val" id="recoilVal">2.00</div>
+          </div>
+        </div>
+        <div>
+          <label>Recoil Recovery</label>
+          <div class="row">
+            <input type="range" id="recoilRecoverySlider" min="2" max="18" step="0.5" value="2">
+            <div class="val" id="recoilRecoveryVal">2.0</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-end; padding-bottom:6px;">
+          <div class="checkrow" style="margin:0;"><input type="checkbox" id="invertYCheck"><label for="invertYCheck">Invert Mouse Y</label></div>
+        </div>
+        <div class="checkrow"><input type="checkbox" id="firstPersonCheck"><label for="firstPersonCheck">First Person Mode (V)</label></div>
+      </div>
+
+      <div class="section">Graphics & Audio</div>
+      <div class="grid2">
+        <div style="grid-column: span 2;">
+          <label>Graphics Quality</label>
+          <select id="gfxQuality">
+            <option value="low">Low (High FPS)</option>
+            <option value="medium">Medium</option>
+            <option value="high" selected>High</option>
+            <option value="ultra">Ultra</option>
+          </select>
+        </div>
+        <div>
+          <label>Master Volume</label>
+          <div class="row">
+            <input type="range" id="volSlider" min="0" max="100" step="1" value="70">
+            <div class="val" id="volVal">70</div>
+          </div>
+        </div>
+        <div>
+          <label>Lighting Brightness</label>
+          <div class="row">
+            <input type="range" id="brightnessSlider" min="0.5" max="2.0" step="0.1" value="1.15">
+            <div class="val" id="brightnessVal">1.15x</div>
+          </div>
+        </div>
+        <div>
+          <label>Ambient Intensity</label>
+          <div class="row">
+            <input type="range" id="ambientSlider" min="0.1" max="1.5" step="0.05" value="0.75">
+            <div class="val" id="ambientVal">0.75</div>
+          </div>
+        </div>
+        <div>
+          <label>Time Scale (Game Speed)</label>
+          <div class="row">
+            <input type="range" id="timeScaleSlider" min="0.1" max="2.0" step="0.1" value="1.0">
+            <div class="val" id="timeScaleVal">1.0x</div>
+          </div>
+        </div>
+        <div class="checkrow" style="align-self:end;">
+          <input type="checkbox" id="ragdollCollisionSoundsCheck" checked><label for="ragdollCollisionSoundsCheck">Ragdoll Collision Sounds</label>
+        </div>
+        <div style="display:flex; flex-direction:column; justify-content:flex-end; grid-column: span 2;">
+           <div class="subsection">Blood & impact visuals</div>
+           <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="bloodCheck" checked><label for="bloodCheck">Blood Effects</label></div>
+           <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="bloodSplashCheck" checked><label for="bloodSplashCheck">Impact Blood Splash</label></div>
+           <div class="checkrow" style="margin:4px 0;"><input type="checkbox" id="fogCheck" checked><label for="fogCheck">Environmental Fog</label></div>
+        </div>
+      </div>
+
+      <div class="section">Blood & Impact</div>
+      <div class="subsection">Particles & splashes</div>
+      <div class="grid2 blood-grid">
+        <div>
+          <label>Blood Particle Amount</label>
+          <div class="row">
+            <input type="range" id="bloodParticleSlider" min="0.5" max="6" step="0.25" value="6">
+            <div class="val" id="bloodParticleVal">6.00x</div>
+          </div>
+        </div>
+        <div>
+          <label>Blood Particle Lifetime</label>
+          <div class="row">
+            <input type="range" id="bloodLifetimeSlider" min="0.15" max="1.5" step="0.05" value="1">
+            <div class="val" id="bloodLifetimeVal">1.00s</div>
+          </div>
+        </div>
+        <div class="checkrow blood-toggle"><input type="checkbox" id="bloodLandingDotsCheck" checked><label for="bloodLandingDotsCheck">Blood Landing Dots</label></div>
+        <div>
+          <label>Landing Dot Size</label>
+          <div class="row"><input type="range" id="bloodDotSizeSlider" min="0.35" max="2.5" step="0.05" value="2.5"><div class="val" id="bloodDotSizeVal">2.50x</div></div>
+        </div>
+        <div>
+          <label>Landing Dot Scatter</label>
+          <div class="row"><input type="range" id="bloodDotScatterSlider" min="0" max="2.5" step="0.05" value="0.65"><div class="val" id="bloodDotScatterVal">0.65x</div></div>
+        </div>
+        <div>
+          <label>Blood Dot Lifetime</label>
+          <div class="row"><input type="range" id="bloodDotLifetimeSlider" min="2" max="30" step="1" value="12"><div class="val" id="bloodDotLifetimeVal">12s</div></div>
+        </div>
+      </div>
+
+      <div class="subsection">Delayed blood pool</div>
+      <div class="grid2 blood-grid">
+        <div class="checkrow blood-toggle"><input type="checkbox" id="bloodPoolsCheck" checked><label for="bloodPoolsCheck">Delayed Blood Pools</label></div>
+        <div>
+          <label>Pool Delay</label>
+          <div class="row"><input type="range" id="bloodPoolDelaySlider" min="0.4" max="5" step="0.1" value="1.4"><div class="val" id="bloodPoolDelayVal">1.4s</div></div>
+        </div>
+        <div>
+          <label>Pool Spread Time</label>
+          <div class="row"><input type="range" id="bloodPoolSpreadSlider" min="0.5" max="8" step="0.1" value="3.2"><div class="val" id="bloodPoolSpreadVal">3.2s</div></div>
+        </div>
+        <div>
+          <label>Pool Size</label>
+          <div class="row"><input type="range" id="bloodPoolSizeSlider" min="0.35" max="3.5" step="0.05" value="1.2"><div class="val" id="bloodPoolSizeVal">1.20x</div></div>
+        </div>
+        <div>
+          <label>Pool Opacity</label>
+          <div class="row"><input type="range" id="bloodPoolOpacitySlider" min="0.15" max="1" step="0.05" value="0.72"><div class="val" id="bloodPoolOpacityVal">0.72</div></div>
+        </div>
+      </div>
+
+      <div class="section">Ragdoll Physics</div>
+      <div class="subsection">Core physics</div>
+      <div class="grid2">
+        <div>
+          <label>Impact Force</label>
+          <div class="row">
+            <input type="range" id="impactForceSlider" min="0.1" max="25" step="0.25" value="0.5">
+            <div class="val" id="impactForceVal">0.5x</div>
+          </div>
+        </div>
+        <div>
+          <label>Ragdoll Weight</label>
+          <div class="row">
+            <input type="range" id="ragdollWeightSlider" min="1" max="3.5" step="0.1" value="2">
+            <div class="val" id="ragdollWeightVal">2.0x</div>
+          </div>
+        </div>
+        <div>
+          <label>Gravity</label>
+          <div class="row">
+            <input type="range" id="gravitySlider" min="4" max="18" step="0.5" value="9.8">
+            <div class="val" id="gravityVal">9.8</div>
+          </div>
+        </div>
+        <div>
+          <label>Ragdoll Reset Time</label>
+          <div class="row">
+            <input type="range" id="resetTimerSlider" min="1" max="60" step="1" value="25">
+            <div class="val" id="resetTimerVal">25s</div>
+          </div>
+        </div>
+        <div class="checkrow" style="align-self:end;"><input type="checkbox" id="ragdollNeverDespawnCheck"><label for="ragdollNeverDespawnCheck">Never Despawn Ragdolls</label></div>
+        <div>
+          <label>Joint Looseness</label>
+          <div class="row">
+            <input type="range" id="jointSlider" min="0.25" max="1.5" step="0.05" value="1">
+            <div class="val" id="jointVal">1.00</div>
+          </div>
+        </div>
+        <div>
+          <label>Joint Strength</label>
+          <div class="row">
+            <input type="range" id="jointStrengthSlider" min="0.35" max="1.5" step="0.05" value="1">
+            <div class="val" id="jointStrengthVal">1.00x</div>
+          </div>
+        </div>
+        <div>
+          <label>Limb Damping</label>
+          <div class="row">
+            <input type="range" id="limbDampingSlider" min="0.02" max="0.35" step="0.01" value="0.08">
+            <div class="val" id="limbDampingVal">0.08</div>
+          </div>
+        </div>
+        <div>
+          <label>Hitbox Size</label>
+          <div class="row">
+            <input type="range" id="hitboxSlider" min="0.85" max="1.2" step="0.01" value="1">
+            <div class="val" id="hitboxVal">1.00x</div>
+          </div>
+        </div>
+        <div>
+          <label>Fall-Save Strength</label>
+          <div class="row">
+            <input type="range" id="fallSaveStrengthSlider" min="0" max="3" step="0.05" value="1.0">
+            <div class="val" id="fallSaveStrengthVal">1.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="subsection">Joint behaviour</div>
+      <div class="checkrow" style="margin-top:12px;">
+        <input type="checkbox" id="showHitboxesCheck">
+        <label for="showHitboxesCheck">Show Hitboxes Debug</label>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="ragdollRotationLimitsCheck" checked>
+        <label for="ragdollRotationLimitsCheck" title="Experimental: limits extreme joint rotation while trying to preserve floppy physics.">Joint Rotation Limits (Experimental)</label>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="looseSettlingCheck" checked>
+        <label for="looseSettlingCheck" title="Stops experimental joint limits from fighting a ragdoll after it has settled naturally on the floor.">Loose Settling</label>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="secondaryMotionCheck" checked>
+        <label for="secondaryMotionCheck">Secondary Body Motion</label>
+      </div>
+      <div>
+        <label>Physics Substeps</label>
+        <div class="row">
+          <input type="range" id="physicsSubstepsSlider" min="4" max="12" step="1" value="12">
+          <div class="val" id="physicsSubstepsVal">12</div>
+        </div>
+      </div>
+
+      <div class="subsection">Stability & settling</div>
+      <div class="checkrow">
+        <input type="checkbox" id="ragdollStabilityCheck" checked>
+        <label for="ragdollStabilityCheck">Ragdoll Stabilization</label>
+      </div>
+      <div>
+        <label>Stabilization Strength</label>
+        <div class="row">
+          <input type="range" id="stabilityStrengthSlider" min="0.25" max="1" step="0.05" value="0.65">
+          <div class="val" id="stabilityStrengthVal">0.65</div>
+        </div>
+      </div>
+      <div>
+        <label>Ragdoll Settle Time</label>
+          <div class="row">
+            <input type="range" id="settleTimeSlider" min="0.2" max="1.5" step="0.05" value="0.55">
+            <div class="val" id="settleTimeVal">0.55s</div>
+          </div>
+        </div>
+        <div>
+          <label>Ground Damping</label>
+          <div class="row">
+            <input type="range" id="groundDampingSlider" min="0" max="1" step="0.05" value="0.65">
+            <div class="val" id="groundDampingVal">0.65</div>
+          </div>
+        </div>
+        <div>
+          <label>Airborne Angular Damping</label>
+          <div class="row">
+            <input type="range" id="airAngularDampingSlider" min="0" max="0.4" step="0.01" value="0.10">
+            <div class="val" id="airAngularDampingVal">0.10</div>
+          </div>
+        </div>
+      <div class="subsection">Impact response</div>
+      <div>
+        <label>Impact Spin</label>
+        <div class="row">
+          <input type="range" id="impactSpinSlider" min="0" max="1" step="0.05" value="1">
+          <div class="val" id="impactSpinVal">1.00x</div>
+        </div>
+      </div>
+      <div>
+        <label>Ragdoll Ground Friction</label>
+        <div class="row">
+          <input type="range" id="ragdollFrictionSlider" min="0.35" max="1.2" step="0.05" value="0.8">
+          <div class="val" id="ragdollFrictionVal">0.80</div>
+        </div>
+      </div>
+
+      <div class="section">Gore & Trauma</div>
+      <div class="grid2">
+        <div class="checkrow"><input type="checkbox" id="bloodSticksCheck" checked><label for="bloodSticksCheck">Blood Sticks To Ragdolls</label></div>
+        <div class="checkrow"><input type="checkbox" id="bulletHolesCheck" checked><label for="bulletHolesCheck">Bullet Holes</label></div>
+        <div class="checkrow"><input type="checkbox" id="dismembermentCheck" checked><label for="dismembermentCheck">Limb Dismemberment</label></div>
+        <div class="checkrow"><input type="checkbox" id="wincingCheck" checked><label for="wincingCheck">Wincing (Kick/Flail On Death)</label></div>
+        <div>
+          <label>Wincing Chance</label>
+          <div class="row">
+            <input type="range" id="wincingChanceSlider" min="0" max="1" step="0.05" value="0.65">
+            <div class="val" id="wincingChanceVal">65%</div>
+          </div>
+        </div>
+        <div>
+          <label>Stumble Chance</label>
+          <div class="row">
+            <input type="range" id="stumbleChanceSlider" min="0" max="1" step="0.05" value="0.4">
+            <div class="val" id="stumbleChanceVal">40%</div>
+          </div>
+        </div>
+        <div>
+          <label>Dismember Hit Threshold</label>
+          <div class="row">
+            <input type="range" id="dismemberThresholdSlider" min="1" max="8" step="1" value="3">
+            <div class="val" id="dismemberThresholdVal">3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btnrow">
+        <button class="respawn" id="respawnBtn">Respawn Dummies + Buildings</button>
+        <button class="resume" id="resumeBtn">Resume</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+
